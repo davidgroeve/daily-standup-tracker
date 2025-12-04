@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Standup Tracker</title>
+  <meta name="description" content="Track daily standup meetings with your team">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>📋 Daily Standup Tracker</h1>
+      </div>
+      
+      <div class="week-info">
+        <button class="btn btn-secondary btn-icon" id="prevWeekBtn" title="Previous Week">
+          ◀
+        </button>
+        <div>
+          <span class="week-badge" id="weekNumber">WEEK 49</span>
+          <span class="date-range" id="dateRange">30 Nov - 04 Dec</span>
+        </div>
+        <button class="btn btn-secondary btn-icon" id="nextWeekBtn" title="Next Week">
+          ▶
+        </button>
+      </div>
+      
+      <button class="btn btn-primary" id="addTeamMemberBtn">
+        ➕ Add Team Member
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Goals Section -->
+    <section class="goals-section">
+      <div class="goals-header">
+        <h2>🎯 Goals - Targets</h2>
+        <button class="btn btn-primary btn-small" id="addGoalBtn">➕ Add Goal</button>
+      </div>
+      <div class="goals-list" id="goalsList">
+        <!-- Goals will be dynamically added here -->
+      </div>
+    </section>
+
+    <!-- Team Members -->
+    <div class="team-management">
+      <strong>Team Members:</strong>
+      <div class="team-members-list" id="teamMembersList">
+        <!-- Team member tags will be dynamically added here -->
+      </div>
+    </div>
+
+    <!-- Standup Grid -->
+    <section class="standup-grid">
+      <table class="grid-table">
+        <thead>
+          <tr>
+            <th style="width: 100px;">Day</th>
+            <!-- Team member columns will be dynamically added here -->
+          </tr>
+        </thead>
+        <tbody id="gridBody">
+          <!-- Grid rows will be dynamically added here -->
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- Add/Edit Team Member Modal -->
+  <div class="modal" id="teamMemberModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="teamMemberModalTitle">Add Team Member</h3>
+        <button class="close-modal" onclick="closeModal('teamMemberModal')">×</button>
+      </div>
+      <div class="form-group">
+        <label for="memberName">Name</label>
+        <input type="text" id="memberName" placeholder="Enter team member name">
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="color-picker" id="colorPicker">
+          <!-- Color options will be dynamically added here -->
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('teamMemberModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveTeamMemberBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Update Modal -->
+  <div class="modal" id="updateModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="updateModalTitle">Add Update</h3>
+        <button class="close-modal" onclick="closeModal('updateModal')">×</button>
+      </div>
+      <div class="form-group">
+        <label for="updateContent">Updates (one per line)</label>
+        <textarea id="updateContent" placeholder="• Task 1&#10;• Task 2&#10;• Task 3"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="deleteUpdateBtn" style="margin-right: auto; display: none;">🗑️ Delete</button>
+        <button class="btn btn-secondary" onclick="closeModal('updateModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveUpdateBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Goal Modal -->
+  <div class="modal" id="goalModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="goalModalTitle">Add Goal</h3>
+        <button class="close-modal" onclick="closeModal('goalModal')">×</button>
+      </div>
+      <div class="form-group">
+        <label for="goalContent">Goal</label>
+        <textarea id="goalContent" placeholder="Enter weekly goal or target" style="min-height: 100px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="deleteGoalBtn" style="margin-right: auto; display: none;">🗑️ Delete</button>
+        <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveGoalBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
