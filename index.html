@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,16 @@
   <meta name="description" content="Track daily standup meetings with your team">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
       <div class="header-title">
+        <img src="public/rommaana-logo-white.png" alt="Rommaana Logo" class="logo">
         <h1>📋 Daily Standup Tracker</h1>
       </div>
-      
+
       <div class="week-info">
         <button class="btn btn-secondary btn-icon" id="prevWeekBtn" title="Previous Week">
           ◀
@@ -27,10 +30,15 @@
           ▶
         </button>
       </div>
-      
-      <button class="btn btn-primary" id="addTeamMemberBtn">
-        ➕ Add Team Member
-      </button>
+
+      <div style="display: flex; gap: var(--spacing-sm);">
+        <button class="btn btn-secondary" id="exportBtn">
+          📤 Export
+        </button>
+        <button class="btn btn-primary" id="addTeamMemberBtn">
+          ➕ Add Team Member
+        </button>
+      </div>
     </div>
   </header>
 
@@ -107,7 +115,8 @@
         <textarea id="updateContent" placeholder="• Task 1&#10;• Task 2&#10;• Task 3"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteUpdateBtn" style="margin-right: auto; display: none;">🗑️ Delete</button>
+        <button class="btn btn-secondary" id="deleteUpdateBtn" style="margin-right: auto; display: none;">🗑️
+          Delete</button>
         <button class="btn btn-secondary" onclick="closeModal('updateModal')">Cancel</button>
         <button class="btn btn-primary" id="saveUpdateBtn">Save</button>
       </div>
@@ -122,17 +131,80 @@
         <button class="close-modal" onclick="closeModal('goalModal')">×</button>
       </div>
       <div class="form-group">
-        <label for="goalContent">Goal</label>
-        <textarea id="goalContent" placeholder="Enter weekly goal or target" style="min-height: 100px;"></textarea>
+        <label for="goalTitle">Goal Title *</label>
+        <input type="text" id="goalTitle" placeholder="Enter goal title" required>
+      </div>
+      <div class="form-group">
+        <label for="goalDescription">Description</label>
+        <textarea id="goalDescription" placeholder="Add more details about this goal"
+          style="min-height: 80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="goalOwner">Owner</label>
+        <input type="text" id="goalOwner" placeholder="Who is responsible?">
+      </div>
+      <div class="form-group">
+        <label for="goalStatus">Status</label>
+        <select id="goalStatus">
+          <option value="not-started">Not Started</option>
+          <option value="in-progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="blocked">Blocked</option>
+        </select>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteGoalBtn" style="margin-right: auto; display: none;">🗑️ Delete</button>
+        <button class="btn btn-secondary" id="deleteGoalBtn" style="margin-right: auto; display: none;">🗑️
+          Delete</button>
         <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancel</button>
         <button class="btn btn-primary" id="saveGoalBtn">Save</button>
       </div>
     </div>
   </div>
 
+  <!-- Export Modal -->
+  <div class="modal" id="exportModal">
+    <div class="modal-content export-modal">
+      <div class="modal-header">
+        <h3>Export Standup Data</h3>
+        <button class="close-modal" onclick="closeModal('exportModal')">×</button>
+      </div>
+      <p style="color: var(--text-muted); margin-bottom: var(--spacing-lg);">Choose a format to export your standup data
+      </p>
+      <div class="export-options">
+        <button class="export-option-btn" id="exportCSV">
+          <span class="export-icon">📊</span>
+          <span class="export-label">CSV</span>
+          <span class="export-description">Spreadsheet format</span>
+        </button>
+        <button class="export-option-btn" id="exportXLSX">
+          <span class="export-icon">📗</span>
+          <span class="export-label">XLSX</span>
+          <span class="export-description">Excel workbook</span>
+        </button>
+        <button class="export-option-btn" id="exportPNG">
+          <span class="export-icon">🖼️</span>
+          <span class="export-label">PNG</span>
+          <span class="export-description">Image screenshot</span>
+        </button>
+        <button class="export-option-btn" id="exportPDF">
+          <span class="export-icon">📄</span>
+          <span class="export-label">PDF</span>
+          <span class="export-description">PDF document</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+
   <script src="app.js"></script>
 </body>
+
 </html>

@@ -101,6 +101,12 @@ body {
   background-clip: text;
 }
 
+.logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
 .week-info {
   display: flex;
   align-items: center;
@@ -215,7 +221,10 @@ body {
   display: flex;
   gap: var(--spacing-md);
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: var(--spacing-sm);
+  flex-wrap: nowrap;
+  align-items: flex-start;
 }
 
 .goal-card {
@@ -229,24 +238,16 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 250px;
+  max-width: 300px;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .goal-card:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--accent-primary);
-}
-
-.goal-card textarea {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.875rem;
-  resize: vertical;
-  min-height: 60px;
-  outline: none;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .goal-actions {
@@ -257,10 +258,48 @@ body {
   gap: var(--spacing-xs);
   opacity: 0;
   transition: opacity var(--transition-base);
+  z-index: 2;
 }
 
 .goal-card:hover .goal-actions {
   opacity: 1;
+}
+
+.goal-status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+  align-self: flex-start;
+}
+
+.goal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: var(--spacing-xs) 0;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.goal-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: var(--spacing-xs) 0;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.goal-owner {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-color);
 }
 
 /* Team Management */
@@ -361,7 +400,8 @@ body {
   border: 2px solid;
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
-  height: 400px;
+  min-height: 100px;
+  max-height: 300px;
   cursor: pointer;
   transition: all var(--transition-base);
   position: relative;
@@ -622,4 +662,51 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Export Modal */
+.export-modal {
+  max-width: 700px;
+}
+
+.export-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+}
+
+.export-option-btn {
+  background: var(--glass-bg);
+  border: 2px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.export-option-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.export-icon {
+  font-size: 2.5rem;
+}
+
+.export-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.export-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
