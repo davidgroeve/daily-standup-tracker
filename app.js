@@ -3,12 +3,36 @@ let state = {
   teamMembers: [],
   updates: {}, // { memberId_date: { content: [...], timestamp: '' } }
   goals: [],
+  leaves: [],
   currentWeekStart: null,
   editingMember: null,
   editingUpdate: null,
   editingGoal: null,
-  isLoading: false
+  editingLeave: null,
+  isLoading: false,
+  currentUserEmail: 'Unknown'
 };
+
+// Collapsible Sections
+function toggleSection(section) {
+  const sectionEl = document.getElementById(section + 'Section');
+  if (sectionEl) {
+    sectionEl.classList.toggle('collapsed');
+    // Save state to localStorage
+    const collapsed = sectionEl.classList.contains('collapsed');
+    localStorage.setItem(section + 'Collapsed', collapsed);
+  }
+}
+
+function restoreCollapsedState() {
+  ['goals', 'leaves'].forEach(section => {
+    const collapsed = localStorage.getItem(section + 'Collapsed') === 'true';
+    const sectionEl = document.getElementById(section + 'Section');
+    if (sectionEl && collapsed) {
+      sectionEl.classList.add('collapsed');
+    }
+  });
+}
 
 // Available colors for team members
 const COLORS = [
@@ -23,9 +47,106 @@ const COLORS = [
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
   initializeWeek();
+
+  // Get current user email
+  try {
+    const user = await window.auth.getUser();
+    if (user && user.email) {
+      state.currentUserEmail = user.email;
+    }
+  } catch (e) {
+    console.error('Error fetching user:', e);
+  }
+
   await loadDataFromDB();
+  restoreCollapsedState(); // Restore collapsed sections
   renderAll();
   attachEventListeners();
+
+  // Refresh Logs Listener
+  const refreshBtn = document.getElementById('refreshLogsBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      const list = document.getElementById('changeLogsList');
+      if (list) list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Refreshing...</p>';
+      loadAndRenderChangeLogs();
+    });
+  }
+
+
+  // Change Password Logic
+  const changePwdBtn = document.getElementById('changePasswordBtn');
+  const changePwdModal = document.getElementById('changePasswordModal');
+  const cancelChangePwdBtn = document.getElementById('cancelChangePasswordBtn');
+  const cancelChangePwdBtnXs = document.getElementById('cancelChangePasswordBtnXs');
+  const saveChangePwdBtn = document.getElementById('saveChangePasswordBtn');
+
+  if (changePwdBtn) {
+    changePwdBtn.addEventListener('click', () => {
+      changePwdModal.style.display = 'flex';
+      document.getElementById('changeOldPassword').value = '';
+      document.getElementById('changeNewPassword').value = '';
+      document.getElementById('changeConfirmPassword').value = '';
+    });
+  }
+
+  const closeChangePwdModal = () => {
+    if (changePwdModal) changePwdModal.style.display = 'none';
+  };
+
+  if (cancelChangePwdBtn) cancelChangePwdBtn.addEventListener('click', closeChangePwdModal);
+  if (cancelChangePwdBtnXs) cancelChangePwdBtnXs.addEventListener('click', closeChangePwdModal);
+
+  if (saveChangePwdBtn) {
+    saveChangePwdBtn.addEventListener('click', async () => {
+      const oldPwd = document.getElementById('changeOldPassword').value;
+      const newPwd = document.getElementById('changeNewPassword').value;
+      const confirmPwd = document.getElementById('changeConfirmPassword').value;
+
+      if (!oldPwd || !newPwd || !confirmPwd) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      if (newPwd !== confirmPwd) {
+        alert('New passwords do not match');
+        return;
+      }
+
+      const originalText = saveChangePwdBtn.textContent;
+      saveChangePwdBtn.textContent = 'Verifying...';
+      saveChangePwdBtn.disabled = true;
+
+      try {
+        // 1. Verify Old Password by Signing In
+        const { error: signInError } = await window.auth.signIn(state.currentUserEmail, oldPwd);
+        if (signInError) {
+          throw new Error('Incorrect current password');
+        }
+
+        // 2. Update to New Password
+        saveChangePwdBtn.textContent = 'Updating...';
+        const { error: updateError } = await window.auth.updatePassword(newPwd);
+        if (updateError) throw updateError;
+
+        alert('Password updated successfully!');
+        closeChangePwdModal();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        saveChangePwdBtn.textContent = originalText;
+        saveChangePwdBtn.disabled = false;
+      }
+    });
+  }
+});
+
+
+
+// Add this line inside attachEventListeners or logic
+document.getElementById('showHolidayCalendarBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent toggling section
+  openHolidayCalendar();
 });
 
 // Date Utilities
@@ -51,7 +172,11 @@ function formatDate(date, format = 'short') {
   } else if (format === 'day') {
     return d.toLocaleDateString('en-US', { weekday: 'long' });
   }
-  return d.toISOString().split('T')[0];
+  // Return YYYY-MM-DD in local time
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(date, days) {
@@ -83,6 +208,9 @@ async function loadDataFromDB() {
     // Load goals for current week
     const weekStart = formatDate(state.currentWeekStart, 'iso');
     state.goals = await window.db.getGoals(weekStart);
+
+    // Load leaves
+    state.leaves = await window.db.getLeaves();
   } catch (error) {
     console.error('Error loading data from database:', error);
     // Fallback to localStorage if DB fails
@@ -93,12 +221,37 @@ async function loadDataFromDB() {
 
 // Fallback to localStorage
 function loadFromLocalStorage() {
+  console.warn('Falling back to localStorage');
   const saved = localStorage.getItem('dailyStandupState');
+
+  // Show a visible warning toast
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ef4444;
+    color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out;
+  `;
+  toast.innerHTML = `
+    <strong>⚠️ Offline Mode</strong><br>
+    Could not connect to database.<br>
+    Viewing local data only.
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+
   if (saved) {
     const parsed = JSON.parse(saved);
     state.teamMembers = parsed.teamMembers || [];
     state.updates = parsed.updates || {};
     state.goals = parsed.goals || [];
+    state.leaves = parsed.leaves || [];
   }
 }
 
@@ -120,6 +273,48 @@ function renderAll() {
   renderTeamMembers();
   renderGrid();
   renderGoals();
+  renderLeaves();
+  loadAndRenderChangeLogs();
+}
+
+async function loadAndRenderChangeLogs() {
+  const list = document.getElementById('changeLogsList');
+  if (!list) return;
+
+  try {
+    const logs = await window.db.getChangeLogs(20);
+
+    if (logs.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No recent activity.</p>';
+      return;
+    }
+
+    list.innerHTML = logs.map(log => {
+      const date = new Date(log.timestamp);
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+      let actionClass = 'action-update';
+      if (log.action === 'create') actionClass = 'action-create';
+      if (log.action === 'delete') actionClass = 'action-delete';
+
+      return `
+                <div class="change-log-item">
+                    <div class="change-meta">
+                        <span class="change-user">${log.user_email.split('@')[0]}</span>
+                        <span class="change-time">${dateStr} ${timeStr}</span>
+                    </div>
+                    <div class="change-desc">
+                        ${log.description || 'No description'}
+                    </div>
+                    <span class="change-action-badge ${actionClass}">${log.action}</span>
+                </div>
+            `;
+    }).join('');
+  } catch (e) {
+    console.error('Error loading logs:', e);
+    list.innerHTML = '<p style="color: #ef4444; text-align: center;">Failed to load activity log.</p>';
+  }
 }
 
 function renderWeekInfo() {
@@ -140,6 +335,79 @@ function renderTeamMembers() {
       <span class="remove-member" onclick="event.stopPropagation(); removeTeamMember('${member.id}')" title="Remove">×</span>
     </div>
   `).join('');
+}
+
+function renderLeaves() {
+  const container = document.getElementById('leavesList');
+  // Filter leaves to show only those affecting this week
+  const weekStart = new Date(state.currentWeekStart);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6); // Assuming Sunday-Saturday week
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const activeLeaves = state.leaves.filter(leave => {
+    const start = new Date(leave.start_date);
+    const end = new Date(leave.end_date);
+    // Determine overlap: (StartA <= EndB) and (EndA >= StartB)
+    return start <= weekEnd && end >= weekStart;
+  });
+
+  const countBadge = document.getElementById('leavesCount');
+  if (countBadge) countBadge.textContent = activeLeaves.length;
+
+  const calBtn = document.getElementById('showHolidayCalendarBtn');
+  if (calBtn) calBtn.style.display = 'block';
+
+  if (!container) return; // Guard clause in case element doesn't exist yet
+
+  if (activeLeaves.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No leaves this week.</p>';
+    // Keep badge at 0 if no leaves
+    return;
+  }
+
+  const typeColors = {
+    'holiday': '#FFB5C5', // Pinkish
+    'sick': '#F56565',    // Red
+    'personal': '#B5E7F5', // Blueish
+    'other': '#E2E8F0'    // Grey
+  };
+
+  const typeEmojis = {
+    'holiday': '🏖️',
+    'sick': '🤒',
+    'personal': '🏠',
+    'other': '📅'
+  };
+
+  container.innerHTML = activeLeaves.map((leave, index) => {
+    // Find member to get their color/name if needed, though we joined in DB query
+    const memberName = leave.team_members ? leave.team_members.name : 'Unknown';
+    const memberColor = leave.team_members ? leave.team_members.color : '#ccc';
+
+    const startDate = new Date(leave.start_date);
+    const endDate = new Date(leave.end_date);
+    const dateStr = startDate.toDateString() === endDate.toDateString()
+      ? formatDate(startDate)
+      : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+
+    return `
+    <div class="leave-card" style="border-left: 4px solid ${memberColor}" onclick="editLeave('${leave.id}')">
+      <div class="leave-actions">
+        <button class="btn btn-secondary btn-small btn-icon" onclick="event.stopPropagation(); removeLeave('${leave.id}')" title="Remove">×</button>
+      </div>
+      <div class="leave-header">
+        <span class="leave-type-badge" style="background: ${typeColors[leave.type] || typeColors['other']}30; color: ${typeColors[leave.type] || '#fff'}">
+          ${typeEmojis[leave.type] || '📅'} ${leave.type.charAt(0).toUpperCase() + leave.type.slice(1)}
+        </span>
+        <span class="leave-date">${dateStr}</span>
+      </div>
+      <h4 class="leave-member">${memberName}</h4>
+      ${leave.description ? `<p class="leave-description">${leave.description}</p>` : ''}
+    </div>
+  `;
+  }).join('');
 }
 
 function renderGrid() {
@@ -167,22 +435,53 @@ function renderGrid() {
         <div style="padding: var(--spacing-md);">
           <span class="day-label">${formatDate(date, 'day')}</span>
           <span class="date-label">${formatDate(date).split(' ')[0]}</span>
+          <span class="date-number">${date.getDate()}</span>
         </div>
       </td>
       ${state.teamMembers.map(member => {
       const updateKey = `${member.id}_${dateStr}`;
       const update = state.updates[updateKey];
 
-      if (update && update.content && update.content.length > 0) {
+      // Render items preview if items exist, otherwise content, otherwise add button
+      const hasItems = update && update.items && update.items.length > 0;
+      const hasContent = update && update.content && update.content.length > 0;
+
+      if (hasItems || hasContent) {
+        let contentHtml = '';
+
+        if (hasItems) {
+          // Group items by type
+          const groups = {};
+          update.items.forEach(item => {
+            const t = item.type || 'General';
+            if (!groups[t]) groups[t] = [];
+            groups[t].push(item);
+          });
+
+          // Render groups
+          contentHtml = `<div class="update-items-grouped">
+                ${Object.keys(groups).map(type => `
+                    <div class="group-section">
+                        <div class="group-header">${type}</div>
+                        ${groups[type].map(item => `
+                            <div class="mini-item">
+                                <span class="mini-status ${item.status}"></span>
+                                <span class="mini-title">${item.title}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            </div>`;
+        } else {
+          // Legacy content
+          contentHtml = `<div class="update-content"><ul>${update.content.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+        }
+
         return `
             <td>
               <div class="update-card" style="border-color: ${member.color};" 
-                   onclick="editUpdate('${member.id}', '${dateStr}')">
-                <div class="update-content">
-                  <ul>
-                    ${update.content.map(item => `<li>${item}</li>`).join('')}
-                  </ul>
-                </div>
+                   onclick="openDailyView('${member.id}', '${dateStr}')">
+                ${contentHtml}
                 <div class="update-time">${update.timestamp ? new Date(update.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
               </div>
             </td>
@@ -191,7 +490,7 @@ function renderGrid() {
         return `
             <td>
               <div class="update-card empty" style="border-color: ${member.color}40;" 
-                   onclick="addUpdate('${member.id}', '${dateStr}')">
+                   onclick="openDailyView('${member.id}', '${dateStr}')">
                 + Add update
               </div>
             </td>
@@ -206,6 +505,8 @@ function renderGrid() {
 
 function renderGoals() {
   const container = document.getElementById('goalsList');
+  const countBadge = document.getElementById('goalsCount');
+  if (countBadge) countBadge.textContent = state.goals.length;
 
   if (state.goals.length === 0) {
     container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No goals set for this week. Click "Add Goal" to get started!</p>';
@@ -231,17 +532,26 @@ function renderGoals() {
     const description = goal.description || '';
     const owner = goal.owner || '';
     const status = goal.status || 'not-started';
+    const type = goal.type || 'General';
+    const blockReason = goal.block_reason || '';
 
     return `
     <div class="goal-card" onclick="editGoal(${index})">
       <div class="goal-actions">
         <button class="btn btn-secondary btn-small btn-icon" onclick="event.stopPropagation(); removeGoal(${index})" title="Remove">×</button>
       </div>
-      <div class="goal-status-badge" style="background: ${statusColors[status]};">
-        ${statusLabels[status]}
+      <div class="goal-header-badges" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span class="goal-type-badge" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${type}</span>
+        <div class="goal-status-badge" style="background: ${statusColors[status]};">
+            ${statusLabels[status]}
+        </div>
       </div>
       <h4 class="goal-title">${title}</h4>
       ${description ? `<p class="goal-description">${description}</p>` : ''}
+      ${status === 'blocked' && blockReason ?
+        `<div class="goal-block-reason" style="background: rgba(245, 101, 101, 0.1); border-left: 2px solid #f56565; padding: 8px; margin: 8px 0; font-size: 0.85rem; color: #f56565;">
+           🛑 <b>Blocked:</b> ${blockReason}
+         </div>` : ''}
       ${owner ? `<p class="goal-owner">👤 ${owner}</p>` : ''}
     </div>
   `;
@@ -306,7 +616,7 @@ async function saveTeamMember() {
   try {
     if (state.editingMember) {
       // Update existing member in DB
-      await window.db.updateTeamMember(state.editingMember, { name, color: selectedColor });
+      await window.db.updateTeamMember(state.editingMember, { name, color: selectedColor }, state.currentUserEmail);
       const member = state.teamMembers.find(m => m.id === state.editingMember);
       if (member) {
         member.name = name;
@@ -314,7 +624,7 @@ async function saveTeamMember() {
       }
     } else {
       // Add new member to DB
-      const newMember = await window.db.createTeamMember({ name, color: selectedColor });
+      const newMember = await window.db.createTeamMember({ name, color: selectedColor }, state.currentUserEmail);
       state.teamMembers.push(newMember);
     }
 
@@ -332,7 +642,7 @@ async function removeTeamMember(id) {
   }
 
   try {
-    await window.db.deleteTeamMember(id);
+    await window.db.deleteTeamMember(id, state.currentUserEmail);
 
     // Remove from local state
     state.teamMembers = state.teamMembers.filter(m => m.id !== id);
@@ -352,86 +662,205 @@ async function removeTeamMember(id) {
 }
 
 // Update Management
-function addUpdate(memberId, date) {
-  state.editingUpdate = { memberId, date, isNew: true };
-  document.getElementById('updateModalTitle').textContent = 'Add Update';
-  document.getElementById('updateContent').value = '';
-  document.getElementById('deleteUpdateBtn').style.display = 'none';
-  showModal('updateModal');
-}
+// (Replaced by openDailyView)
 
-function editUpdate(memberId, date) {
+function openDailyView(memberId, date) {
   const updateKey = `${memberId}_${date}`;
-  const update = state.updates[updateKey];
+  const update = state.updates[updateKey] || { content: [], items: [], timestamp: null };
+  const member = state.teamMembers.find(m => m.id === memberId);
 
-  state.editingUpdate = { memberId, date, isNew: false };
-  document.getElementById('updateModalTitle').textContent = 'Edit Update';
-  document.getElementById('updateContent').value = update?.content?.join('\n') || '';
-  document.getElementById('deleteUpdateBtn').style.display = 'block';
-  showModal('updateModal');
-}
+  state.currentDailyView = { memberId, date };
 
-async function saveUpdate() {
-  if (!state.editingUpdate) return;
+  document.getElementById('dailyViewTitle').innerHTML = `Updates - <span style="color: ${member ? member.color : 'inherit'}">${member ? member.name : ''}</span> <br><small style="font-weight:400; opacity:0.7;">${formatDate(date, 'day')}, ${date}</small>`;
 
-  const content = document.getElementById('updateContent').value
-    .split('\n')
-    .map(line => line.trim().replace(/^[•\-\*]\s*/, '')) // Remove bullet points
-    .filter(line => line.length > 0);
+  const container = document.getElementById('dailyItemsList');
+  container.innerHTML = '';
 
-  if (content.length === 0) {
-    alert('Please enter at least one update');
-    return;
+  const items = update.items || [];
+
+  if (items.length === 0 && (!update.content || update.content.length === 0)) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No items yet. Click "Add Item" to start.</p>';
+  } else {
+    if (items.length > 0) {
+      items.forEach((item, index) => {
+        // Find related goal info
+        let goalInfo = '';
+        if (item.goal_id) {
+          const goal = state.goals.find(g => g.id === item.goal_id);
+          if (goal) {
+            goalInfo = `<div style="font-size:0.75rem; color: var(--accent-primary); margin-top:4px;">🎯 ${goal.title}</div>`;
+          }
+        }
+
+        const el = document.createElement('div');
+        el.className = 'daily-item-card';
+        el.innerHTML = `
+             <div class="item-header">
+                <span class="item-type badge">${item.type || 'General'}</span>
+                <span class="item-status badge ${item.status}">${item.status}</span>
+             </div>
+             <div class="item-title">${item.title}</div>
+             ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+             ${goalInfo}
+             ${item.status === 'blocked' && item.block_reason ? `<div class="item-block">🛑 ${item.block_reason}</div>` : ''}
+           `;
+        el.onclick = () => openUpdateItemModal(index);
+        container.appendChild(el);
+      });
+    }
+
+    if (update.content && update.content.length > 0) {
+      const legacy = document.createElement('div');
+      legacy.className = 'legacy-content';
+      legacy.style.marginTop = '1rem';
+      legacy.style.paddingTop = '1rem';
+      legacy.style.borderTop = '1px dashed var(--border-color)';
+      legacy.innerHTML = '<h5 style="margin-bottom:0.5rem; opacity:0.7;">Other Notes:</h5><ul style="padding-left:1.2rem; opacity:0.8;">' + update.content.map(line => `<li>${line}</li>`).join('') + '</ul>';
+      container.appendChild(legacy);
+    }
   }
 
-  const { memberId, date } = state.editingUpdate;
+  showModal('dailyViewModal');
+}
+
+function openUpdateItemModal(index = null) {
+  state.editingUpdateItemIndex = index;
+  const { memberId, date } = state.currentDailyView;
+  const updateKey = `${memberId}_${date}`;
+  const update = state.updates[updateKey] || { items: [] };
+  const items = update.items || [];
+
+  document.getElementById('updateItemModalTitle').textContent = index !== null ? 'Edit Update Item' : 'Add Update Item';
+
+  const typeInput = document.getElementById('updateItemType');
+  const titleInput = document.getElementById('updateItemTitle');
+  const descInput = document.getElementById('updateItemDescription');
+  const statusInput = document.getElementById('updateItemStatus');
+  const goalInput = document.getElementById('updateItemGoal');
+  const blockInput = document.getElementById('updateItemBlockReason');
+  const blockGroup = document.getElementById('updateItemBlockReasonGroup');
+  const deleteBtn = document.getElementById('deleteUpdateItemBtn');
+
+  // Populate Goal Selector
+  goalInput.innerHTML = '<option value="">None</option>' +
+    state.goals.map(g => `<option value="${g.id}">🎯 ${g.title} (${g.status})</option>`).join('');
+
+  if (index !== null) {
+    const item = items[index];
+    typeInput.value = item.type || 'General';
+    titleInput.value = item.title || '';
+    descInput.value = item.description || '';
+    statusInput.value = item.status || 'not-started';
+    goalInput.value = item.goal_id || '';
+    blockInput.value = item.block_reason || '';
+    blockGroup.style.display = item.status === 'blocked' ? 'block' : 'none';
+    deleteBtn.style.display = 'block';
+  } else {
+    typeInput.value = 'General';
+    titleInput.value = '';
+    descInput.value = '';
+    statusInput.value = 'not-started';
+    goalInput.value = '';
+    blockInput.value = '';
+    blockGroup.style.display = 'none';
+    deleteBtn.style.display = 'none';
+  }
+
+  showModal('updateItemModal');
+}
+
+async function saveUpdateItem() {
+  const { memberId, date } = state.currentDailyView;
+  const updateKey = `${memberId}_${date}`;
+  let update = state.updates[updateKey] || { content: [], items: [], timestamp: null };
+  if (!update.items) update.items = [];
+
+  const type = document.getElementById('updateItemType').value;
+  const title = document.getElementById('updateItemTitle').value.trim();
+  const description = document.getElementById('updateItemDescription').value.trim();
+  const status = document.getElementById('updateItemStatus').value;
+  const goalId = document.getElementById('updateItemGoal').value;
+  const blockReason = document.getElementById('updateItemBlockReason').value.trim();
+
+  if (!title) { alert('Title is required'); return; }
+
+  const newItem = {
+    type, title, description, status,
+    goal_id: goalId,
+    block_reason: status === 'blocked' ? blockReason : ''
+  };
+
+  if (state.editingUpdateItemIndex !== null) {
+    update.items[state.editingUpdateItemIndex] = newItem;
+  } else {
+    update.items.push(newItem);
+  }
+
   const timestamp = new Date().toISOString();
 
   try {
-    await window.db.saveUpdate(memberId, date, content, timestamp);
-
-    const updateKey = `${memberId}_${date}`;
-    state.updates[updateKey] = { content, timestamp };
-
+    await window.db.saveUpdate(memberId, date, update.content, update.items, timestamp, state.currentUserEmail);
+    state.updates[updateKey] = { ...update, timestamp };
     renderAll();
-    closeModal('updateModal');
-  } catch (error) {
-    console.error('Error saving update:', error);
-    alert('Failed to save update. Please try again.');
+    openDailyView(memberId, date);
+    closeModal('updateItemModal');
+  } catch (e) {
+    console.error(e);
+    alert('Failed to save');
   }
 }
 
-async function deleteUpdate() {
-  if (!state.editingUpdate) return;
+async function deleteUpdateItem() {
+  if (state.editingUpdateItemIndex === null) return;
+  if (!confirm('Delete item?')) return;
 
-  if (!confirm('Are you sure you want to delete this update?')) {
-    return;
-  }
+  const { memberId, date } = state.currentDailyView;
+  const updateKey = `${memberId}_${date}`;
+  let update = state.updates[updateKey];
 
-  const { memberId, date } = state.editingUpdate;
+  update.items.splice(state.editingUpdateItemIndex, 1);
+  const timestamp = new Date().toISOString();
 
   try {
-    await window.db.deleteUpdate(memberId, date);
-
-    const updateKey = `${memberId}_${date}`;
-    delete state.updates[updateKey];
-
+    await window.db.saveUpdate(memberId, date, update.content, update.items, timestamp, state.currentUserEmail);
+    state.updates[updateKey] = update;
     renderAll();
-    closeModal('updateModal');
-  } catch (error) {
-    console.error('Error deleting update:', error);
-    alert('Failed to delete update. Please try again.');
+    openDailyView(memberId, date);
+    closeModal('updateItemModal');
+  } catch (e) {
+    console.error(e);
+    alert('Failed to delete');
+  }
+}
+
+async function deleteDailyUpdate() {
+  if (!confirm('Are you sure you want to delete ALL updates for this day? This action cannot be undone.')) return;
+
+  const { memberId, date } = state.currentDailyView;
+  const updateKey = `${memberId}_${date}`;
+
+  try {
+    await window.db.deleteUpdate(memberId, date, state.currentUserEmail);
+    delete state.updates[updateKey];
+    renderAll();
+    closeModal('dailyViewModal');
+  } catch (e) {
+    console.error(e);
+    alert('Failed to delete update');
   }
 }
 
 // Goal Management
 function openGoalModal() {
   state.editingGoal = null;
-  document.getElementById('goalModalTitle').textContent = 'Add Goal';
+  document.getElementById('goalModalTitle').textContent = 'Add Target';
+  document.getElementById('goalType').value = 'Investors';
   document.getElementById('goalTitle').value = '';
   document.getElementById('goalDescription').value = '';
   document.getElementById('goalOwner').value = '';
   document.getElementById('goalStatus').value = 'not-started';
+  document.getElementById('goalBlockReason').value = '';
+  document.getElementById('blockReasonGroup').style.display = 'none';
   document.getElementById('deleteGoalBtn').style.display = 'none';
   showModal('goalModal');
 }
@@ -440,38 +869,55 @@ function editGoal(index) {
   state.editingGoal = index;
   const goal = state.goals[index];
 
-  document.getElementById('goalModalTitle').textContent = 'Edit Goal';
+  document.getElementById('goalModalTitle').textContent = 'Edit Target';
+  document.getElementById('goalType').value = goal.type || 'Investors';
   document.getElementById('goalTitle').value = goal.title || '';
   document.getElementById('goalDescription').value = goal.description || '';
   document.getElementById('goalOwner').value = goal.owner || '';
   document.getElementById('goalStatus').value = goal.status || 'not-started';
+  document.getElementById('goalBlockReason').value = goal.block_reason || '';
+
+  const blockGroup = document.getElementById('blockReasonGroup');
+  if (goal.status === 'blocked') {
+    blockGroup.style.display = 'block';
+  } else {
+    blockGroup.style.display = 'none';
+  }
+
   document.getElementById('deleteGoalBtn').style.display = 'block';
   showModal('goalModal');
 }
 
 async function saveGoal() {
+  const type = document.getElementById('goalType').value;
   const title = document.getElementById('goalTitle').value.trim();
   const description = document.getElementById('goalDescription').value.trim();
   const owner = document.getElementById('goalOwner').value.trim();
   const status = document.getElementById('goalStatus').value;
+  const blockReason = document.getElementById('goalBlockReason').value.trim();
 
   if (!title) {
-    alert('Please enter a goal title');
+    alert('Please enter a target title');
     return;
   }
 
   const weekStart = formatDate(state.currentWeekStart, 'iso');
-  const goalData = { title, description, owner, status };
+  // Include block_reason only if status is blocked? or always save it? logic implies only if blocked.
+  // Actually, keeping it is fine, but maybe clear it if not blocked?
+  // Let's keep strict to UI: if status != blocked, reason is irrelevant.
+  const finalBlockReason = status === 'blocked' ? blockReason : '';
+
+  const goalData = { title, description, owner, status, type, block_reason: finalBlockReason };
 
   try {
     if (state.editingGoal !== null) {
       // Update existing goal
       const goalId = state.goals[state.editingGoal].id;
-      await window.db.updateGoal(goalId, goalData);
+      await window.db.updateGoal(goalId, goalData, state.currentUserEmail);
       state.goals[state.editingGoal] = { ...state.goals[state.editingGoal], ...goalData };
     } else {
       // Create new goal
-      const newGoal = await window.db.createGoal(goalData, weekStart);
+      const newGoal = await window.db.createGoal(goalData, weekStart, state.currentUserEmail);
       state.goals.push(newGoal);
     }
 
@@ -490,13 +936,289 @@ async function removeGoal(index) {
 
   try {
     const goalId = state.goals[index].id;
-    await window.db.deleteGoal(goalId);
+    await window.db.deleteGoal(goalId, state.currentUserEmail);
 
     state.goals.splice(index, 1);
     renderAll();
   } catch (error) {
     console.error('Error removing goal:', error);
     alert('Failed to remove goal. Please try again.');
+  }
+}
+
+// Leave Management
+function openLeaveModal() {
+  state.editingLeave = null;
+  document.getElementById('leaveModalTitle').textContent = 'Add Leave';
+
+  // Populate member dropdown
+  const memberSelect = document.getElementById('leaveMember');
+  memberSelect.innerHTML = '<option value="">Select Team Member</option>' +
+    state.teamMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  document.getElementById('leaveMember').value = '';
+  document.getElementById('leaveStartDate').valueAsDate = new Date();
+  document.getElementById('leaveEndDate').valueAsDate = new Date();
+  document.getElementById('leaveType').value = 'holiday';
+  document.getElementById('leaveDescription').value = '';
+  document.getElementById('deleteLeaveBtn').style.display = 'none';
+  showModal('leaveModal');
+}
+
+function editLeave(id) {
+  const leave = state.leaves.find(l => l.id === id);
+  if (!leave) return;
+
+  state.editingLeave = id;
+  document.getElementById('leaveModalTitle').textContent = 'Edit Leave';
+
+  // Populate member dropdown
+  const memberSelect = document.getElementById('leaveMember');
+  memberSelect.innerHTML = state.teamMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  document.getElementById('leaveMember').value = leave.member_id;
+  document.getElementById('leaveStartDate').value = leave.start_date;
+  document.getElementById('leaveEndDate').value = leave.end_date;
+  document.getElementById('leaveType').value = leave.type;
+  document.getElementById('leaveDescription').value = leave.description || '';
+  document.getElementById('deleteLeaveBtn').style.display = 'block';
+  showModal('leaveModal');
+}
+
+// Holiday Calendar Logic
+async function openHolidayCalendar() {
+  showModal('holidayCalendarModal');
+  const container = document.getElementById('holidayCalendarContainer');
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading calendar...</p>';
+
+  try {
+    const today = new Date();
+    const startDateStr = formatDate(getWeekStart(today), 'iso'); // Start from current week (Monday)
+    const leaves = await window.db.getFutureLeaves(startDateStr);
+
+    renderHolidayCalendar(leaves);
+  } catch (e) {
+    console.error('Error loading holiday calendar:', e);
+    container.innerHTML = '<p style="color: #ef4444; text-align: center;">Failed to load calendar.</p>';
+  }
+}
+
+function renderHolidayCalendar(leaves) {
+  const container = document.getElementById('holidayCalendarContainer');
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'calendar-grid';
+
+  // Generate 6 months
+  const today = new Date();
+  for (let i = 0; i < 6; i++) {
+    const currentMonth = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const monthDiv = document.createElement('div');
+    monthDiv.className = 'calendar-month';
+
+    const monthTitle = document.createElement('div');
+    monthTitle.className = 'month-title';
+    monthTitle.textContent = currentMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    monthDiv.appendChild(monthTitle);
+
+    const daysHeader = document.createElement('div');
+    daysHeader.className = 'month-days';
+    ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(day => {
+      const d = document.createElement('div');
+      d.className = 'day-header';
+      d.textContent = day;
+      daysHeader.appendChild(d);
+    });
+    monthDiv.appendChild(daysHeader);
+
+    const daysGrid = document.createElement('div');
+    daysGrid.className = 'month-days';
+
+    // Get days in month
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+
+    // Empty cells for padding
+    for (let j = 0; j < firstDay; j++) {
+      const empty = document.createElement('div');
+      daysGrid.appendChild(empty);
+    }
+
+    // Days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
+      const dateStr = formatDate(dayDate, 'iso');
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      cell.textContent = d;
+
+      if (dayDate.toDateString() === new Date().toDateString()) {
+        cell.classList.add('today');
+      }
+
+      // check for leaves
+      const dayLeaves = leaves.filter(l => {
+        return dateStr >= l.start_date && dateStr <= l.end_date;
+      });
+
+      if (dayLeaves.length > 0) {
+        cell.classList.add('has-leave');
+        cell.style.cursor = 'pointer';
+
+        // Use the color of the first person on leave, or neutral if multiple
+        if (dayLeaves.length === 1 && dayLeaves[0].team_members && dayLeaves[0].team_members.color) {
+          cell.style.backgroundColor = hexToRgba(dayLeaves[0].team_members.color, 0.2);
+          cell.style.color = dayLeaves[0].team_members.color;
+          cell.style.fontWeight = 'bold';
+        } else if (dayLeaves.length > 1) {
+          cell.style.backgroundColor = 'var(--bg-tertiary)';
+          cell.style.border = '1px solid var(--accent-primary)';
+        }
+
+        // Tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'leave-tooltip';
+        tooltip.innerHTML = dayLeaves.map(l =>
+          `<div>${l.team_members?.name || 'Unknown'} (${l.type})</div>`
+        ).join('');
+        cell.appendChild(tooltip);
+
+        // Click Event
+        cell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handleLeaveClick(dayLeaves);
+        });
+      }
+
+      daysGrid.appendChild(cell);
+    }
+    monthDiv.appendChild(daysGrid);
+    grid.appendChild(monthDiv);
+  }
+  container.appendChild(grid);
+}
+
+function handleLeaveClick(leaves) {
+  if (leaves.length === 1) {
+    closeModal('holidayCalendarModal');
+    // Ensure leave exists in state
+    const exists = state.leaves.find(l => l.id === leaves[0].id);
+    if (!exists) {
+      state.leaves.push(leaves[0]);
+    }
+    editLeave(leaves[0].id);
+  } else if (leaves.length > 1) {
+    showLeaveSelectionInCalendar(leaves);
+  }
+}
+
+function showLeaveSelectionInCalendar(leaves) {
+  const container = document.getElementById('holidayCalendarContainer');
+  container.innerHTML = `
+        <div class="leave-selection-list">
+            <h4 style="text-align: center; margin-bottom: 1rem;">Select a leave to edit</h4>
+            ${leaves.map((l, index) => `
+                <div class="leave-selection-item" id="leave-select-${index}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>${l.team_members?.name || 'Unknown'}</strong>
+                        <span style="font-size: 0.8rem; opacity: 0.8;">${l.type}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        ${l.start_date} - ${l.end_date}
+                    </div>
+                </div>
+            `).join('')}
+            <button class="btn btn-secondary" onclick="openHolidayCalendar()" style="margin-top: 1rem; width: 100%;">Back to Calendar</button>
+        </div>
+    `;
+
+  // Attach listeners
+  leaves.forEach((leave, index) => {
+    document.getElementById(`leave-select-${index}`).addEventListener('click', () => {
+      closeModal('holidayCalendarModal');
+      const exists = state.leaves.find(l => l.id === leave.id);
+      if (!exists) {
+        state.leaves.push(leave);
+      }
+      editLeave(leave.id);
+    });
+  });
+}
+
+// Helper for Hex to RGBA (simple version)
+function hexToRgba(hex, alpha) {
+  let c;
+  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+    c = hex.substring(1).split('');
+    if (c.length == 3) {
+      c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+    }
+    c = '0x' + c.join('');
+    return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + alpha + ')';
+  }
+  return 'rgba(0,0,0,0.1)'; // Fallback
+}
+
+async function saveLeave() {
+  const memberId = document.getElementById('leaveMember').value;
+  const startDate = document.getElementById('leaveStartDate').value;
+  const endDate = document.getElementById('leaveEndDate').value;
+  const type = document.getElementById('leaveType').value;
+  const description = document.getElementById('leaveDescription').value.trim();
+
+  if (!memberId) {
+    alert('Please select a team member');
+    return;
+  }
+
+  if (!startDate || !endDate) {
+    alert('Please select start and end dates');
+    return;
+  }
+
+  if (new Date(endDate) < new Date(startDate)) {
+    alert('End date cannot be before start date');
+    return;
+  }
+
+  const leaveData = { member_id: memberId, start_date: startDate, end_date: endDate, type, description };
+
+  try {
+    if (state.editingLeave) {
+      // Update existing
+      const updatedLeave = await window.db.updateLeave(state.editingLeave, leaveData);
+      const index = state.leaves.findIndex(l => l.id === state.editingLeave);
+      if (index !== -1) {
+        state.leaves[index] = updatedLeave;
+      }
+    } else {
+      // Create new
+      const newLeave = await window.db.createLeave(leaveData);
+      state.leaves.push(newLeave);
+      // Sort by date
+      state.leaves.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    }
+
+    renderLeaves();
+    closeModal('leaveModal');
+  } catch (error) {
+    console.error('Error saving leave:', error);
+    alert('Failed to save leave. Please try again.');
+  }
+}
+
+async function removeLeave(id) {
+  if (!confirm('Are you sure you want to remove this leave entry?')) {
+    return;
+  }
+
+  try {
+    await window.db.deleteLeave(id);
+    state.leaves = state.leaves.filter(l => l.id !== id);
+    renderLeaves();
+  } catch (error) {
+    console.error('Error removing leave:', error);
+    alert('Failed to remove leave. Please try again.');
   }
 }
 
@@ -515,13 +1237,26 @@ function attachEventListeners() {
   document.getElementById('prevWeekBtn').addEventListener('click', () => navigateWeek(-1));
   document.getElementById('nextWeekBtn').addEventListener('click', () => navigateWeek(1));
 
-  // Team member
+  // Team Management
+  document.getElementById('manageTeamBtn').addEventListener('click', () => showModal('manageTeamModal'));
   document.getElementById('addTeamMemberBtn').addEventListener('click', openTeamMemberModal);
   document.getElementById('saveTeamMemberBtn').addEventListener('click', saveTeamMember);
 
   // Update
-  document.getElementById('saveUpdateBtn').addEventListener('click', saveUpdate);
-  document.getElementById('deleteUpdateBtn').addEventListener('click', deleteUpdate);
+  document.getElementById('addUpdateItemBtn').addEventListener('click', () => openUpdateItemModal(null));
+  document.getElementById('saveUpdateItemBtn').addEventListener('click', saveUpdateItem);
+  document.getElementById('deleteUpdateItemBtn').addEventListener('click', deleteUpdateItem);
+
+  // Update Item Status Change
+  document.getElementById('updateItemStatus').addEventListener('change', (e) => {
+    const blockGroup = document.getElementById('updateItemBlockReasonGroup');
+    if (e.target.value === 'blocked') {
+      blockGroup.style.display = 'block';
+      setTimeout(() => document.getElementById('updateItemBlockReason').focus(), 100);
+    } else {
+      blockGroup.style.display = 'none';
+    }
+  });
 
   // Goal
   document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
@@ -530,6 +1265,33 @@ function attachEventListeners() {
     if (state.editingGoal !== null) {
       await removeGoal(state.editingGoal);
       closeModal('goalModal');
+    }
+  });
+
+  // Goal Status Change Listener
+  document.getElementById('goalStatus').addEventListener('change', (e) => {
+    const blockGroup = document.getElementById('blockReasonGroup');
+    if (e.target.value === 'blocked') {
+      blockGroup.style.display = 'block';
+      // Focus on reason
+      setTimeout(() => document.getElementById('goalBlockReason').focus(), 100);
+    } else {
+      blockGroup.style.display = 'none';
+    }
+  });
+
+  // Leave
+  const addLeaveBtn = document.getElementById('addLeaveBtn');
+  if (addLeaveBtn) addLeaveBtn.addEventListener('click', openLeaveModal);
+
+  const saveLeaveBtn = document.getElementById('saveLeaveBtn');
+  if (saveLeaveBtn) saveLeaveBtn.addEventListener('click', saveLeave);
+
+  const deleteLeaveBtn = document.getElementById('deleteLeaveBtn');
+  if (deleteLeaveBtn) deleteLeaveBtn.addEventListener('click', async () => {
+    if (state.editingLeave) {
+      await removeLeave(state.editingLeave);
+      closeModal('leaveModal');
     }
   });
 

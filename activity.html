@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Log - Daily Standup Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .activity-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+
+        .change-logs-section {
+            /* Override for full page view if needed */
+            margin-top: 0;
+            min-height: 80vh;
+        }
+
+        .change-logs-list {
+            max-height: none;
+            /* Allow full page scrolling */
+            overflow-y: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <a href="index.html" style="text-decoration: none;">
+                    <div class="logo-stack">
+                        <img src="public/rommaana-logo-white.png" alt="Rommaana Logo" class="logo" id="logo-dark">
+                        <img src="public/Rommaana-Original.png" alt="Rommaana Logo" class="logo" id="logo-light"
+                            style="display: none;">
+                    </div>
+                </a>
+                <h1 style="margin-left: 1rem;">Activity Log</h1>
+            </div>
+
+            <div style="display: flex; gap: var(--spacing-sm);">
+                <a href="index.html" class="btn btn-secondary">🏠 Dashboard</a>
+                <button class="btn btn-secondary btn-icon" id="themeToggleBtn" title="Toggle Theme">
+                    🌙
+                </button>
+                <button class="btn btn-secondary" id="signOutBtn" style="border-color: #ef4444; color: #ef4444;">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="activity-container">
+        <section class="change-logs-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2>Recent Activity</h2>
+                <button class="btn btn-primary" id="refreshLogsBtn">🔄 Refresh</button>
+            </div>
+
+            <div id="changeLogsList" class="change-logs-list">
+                <p style="text-align: center; color: var(--text-muted);">Loading activity...</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+        // Theme Management (Copied from index.html)
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+            const logoDark = document.getElementById('logo-dark');
+            const logoLight = document.getElementById('logo-light');
+            if (logoDark && logoLight) {
+                logoDark.style.display = theme === 'dark' ? 'block' : 'none';
+                logoLight.style.display = theme === 'light' ? 'block' : 'none';
+            }
+        }
+
+        // Initialize theme
+        initTheme();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Auth check
+            const session = await window.auth.protectRoute();
+            if (!session) return;
+
+            document.getElementById('signOutBtn').addEventListener('click', async () => {
+                await window.auth.signOut();
+            });
+
+            document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+            document.getElementById('refreshLogsBtn').addEventListener('click', loadLogs);
+
+            // Load logs
+            loadLogs();
+        });
+
+        async function loadLogs() {
+            const list = document.getElementById('changeLogsList');
+            list.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading activity...</p>';
+
+            try {
+                // Fetch more logs for the dedicated page (e.g., 50)
+                const logs = await window.db.getChangeLogs(50);
+
+                if (logs.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No activity found.</p>';
+                    return;
+                }
+
+                list.innerHTML = logs.map(log => {
+                    const date = new Date(log.timestamp);
+                    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    let actionClass = 'action-update';
+                    if (log.action === 'create') actionClass = 'action-create';
+                    if (log.action === 'delete') actionClass = 'action-delete';
+
+                    return `
+                        <div class="change-log-item">
+                            <div class="change-meta">
+                                <span class="change-user">${log.user_email.split('@')[0]}</span>
+                                <span class="change-time">${dateStr} ${timeStr}</span>
+                            </div>
+                            <div class="change-desc">
+                                ${log.description || 'No description'}
+                            </div>
+                            <span class="change-action-badge ${actionClass}">${log.action}</span>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                list.innerHTML = '<p style="color: #ef4444; text-align: center;">Failed to load logs.</p>';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -14,9 +14,15 @@
   <header class="header">
     <div class="header-content">
       <div class="header-title">
-        <img src="public/rommaana-logo-white.png" alt="Rommaana Logo" class="logo">
-        <h1>📋 Daily Standup Tracker</h1>
+        <div class="logo-stack">
+          <img src="public/rommaana-logo-white.png" alt="Rommaana Logo" class="logo" id="logo-dark">
+          <img src="public/Rommaana-Original.png" alt="Rommaana Logo" class="logo" id="logo-light"
+            style="display: none;">
+          <h1>Daily Standup</h1>
+        </div>
       </div>
+
+
 
       <div class="week-info">
         <button class="btn btn-secondary btn-icon" id="prevWeekBtn" title="Previous Week">
@@ -31,12 +37,63 @@
         </button>
       </div>
 
+      <!-- World Clocks inline -->
+      <div class="header-clocks-inline">
+        <div class="clock-wrapper">
+          <div class="analog-clock" data-timezone="Asia/Riyadh">
+            <div class="clock-face">
+              <div class="clock-center"></div>
+              <div class="hand hour-hand"></div>
+              <div class="hand minute-hand"></div>
+              <div class="hand second-hand"></div>
+            </div>
+          </div>
+          <div class="clock-label">🇸🇦</div>
+        </div>
+        <div class="clock-wrapper">
+          <div class="analog-clock" data-timezone="Europe/Madrid">
+            <div class="clock-face">
+              <div class="clock-center"></div>
+              <div class="hand hour-hand"></div>
+              <div class="hand minute-hand"></div>
+              <div class="hand second-hand"></div>
+            </div>
+          </div>
+          <div class="clock-label">🇪🇸</div>
+        </div>
+        <div class="clock-wrapper">
+          <div class="analog-clock" data-timezone="Europe/London">
+            <div class="clock-face">
+              <div class="clock-center"></div>
+              <div class="hand hour-hand"></div>
+              <div class="hand minute-hand"></div>
+              <div class="hand second-hand"></div>
+            </div>
+          </div>
+          <div class="clock-label">🇬🇧</div>
+        </div>
+        <div class="clock-wrapper">
+          <div class="analog-clock" data-timezone="America/Mexico_City">
+            <div class="clock-face">
+              <div class="clock-center"></div>
+              <div class="hand hour-hand"></div>
+              <div class="hand minute-hand"></div>
+              <div class="hand second-hand"></div>
+            </div>
+          </div>
+          <div class="clock-label">🇲🇽</div>
+        </div>
+      </div>
+
       <div style="display: flex; gap: var(--spacing-sm);">
-        <button class="btn btn-secondary" id="exportBtn">
-          📤 Export
+        <a href="analytics.html" class="btn btn-secondary">📊 Analytics</a>
+        <a href="activity.html" class="btn btn-secondary">📝 Activity</a>
+        <button class="btn btn-secondary" id="changePasswordBtn">🔑 Change Password</button>
+        <button class="btn btn-secondary btn-icon" id="themeToggleBtn" title="Toggle Theme">
+          🌙
         </button>
-        <button class="btn btn-primary" id="addTeamMemberBtn">
-          ➕ Add Team Member
+        <button class="btn btn-secondary" id="signOutBtn" style="border-color: #ef4444; color: #ef4444;">
+          Sign Out
         </button>
       </div>
     </div>
@@ -44,23 +101,51 @@
 
   <!-- Main Container -->
   <div class="container">
-    <!-- Goals Section -->
-    <section class="goals-section">
-      <div class="goals-header">
-        <h2>🎯 Goals - Targets</h2>
-        <button class="btn btn-primary btn-small" id="addGoalBtn">➕ Add Goal</button>
-      </div>
-      <div class="goals-list" id="goalsList">
-        <!-- Goals will be dynamically added here -->
-      </div>
-    </section>
+    <!-- Top Row: Goals + Leaves Sidebar -->
+    <div class="dashboard-top-row">
+      <!-- Goals Section -->
+      <section class="goals-section collapsible-section" id="goalsSection">
+        <div class="goals-header">
+          <div class="header-left" onclick="toggleSection('goals')">
+            <span class="collapse-icon" id="goalsCollapseIcon">▼</span>
+            <h2>🎯 Goals - Targets <span class="count-badge" id="goalsCount">0</span></h2>
+          </div>
+          <button class="btn btn-primary btn-small" id="addGoalBtn">➕ Add Goal</button>
+        </div>
+        <div class="goals-list collapsible-content" id="goalsList">
+          <!-- Goals will be dynamically added here -->
+        </div>
+      </section>
+
+      <!-- Leaves Section (Sidebar) -->
+      <section class="leaves-section collapsible-section" id="leavesSection">
+        <div class="leaves-header">
+          <div class="header-left" onclick="toggleSection('leaves')">
+            <span class="collapse-icon" id="leavesCollapseIcon">▼</span>
+            <h2>🏖️ Leaves <span class="count-badge" id="leavesCount">0</span></h2>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-small" id="showHolidayCalendarBtn" title="Show all holidays"
+              style="display: none; font-size: 0.8rem;">📅 All</button>
+            <button class="btn btn-primary btn-small" id="addLeaveBtn" title="Add Leave">➕</button>
+          </div>
+        </div>
+        <div class="leaves-list collapsible-content" id="leavesList">
+          <!-- Leaves will be dynamically added here -->
+        </div>
+      </section>
+    </div>
 
     <!-- Team Members -->
     <div class="team-management">
-      <strong>Team Members:</strong>
-      <div class="team-members-list" id="teamMembersList">
-        <!-- Team member tags will be dynamically added here -->
+      <div class="team-header">
+        <strong>Team Members:</strong>
+        <div class="team-actions">
+          <button class="btn btn-secondary btn-small" id="manageTeamBtn">👥 Manage Team Members</button>
+          <button class="btn btn-secondary btn-small" id="exportBtn">📤 Export</button>
+        </div>
       </div>
+      <!-- Team members list moved to modal -->
     </div>
 
     <!-- Standup Grid -->
@@ -77,6 +162,28 @@
         </tbody>
       </table>
     </section>
+  </div>
+
+  <!-- Manage Team Modal -->
+  <div class="modal" id="manageTeamModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Team Members</h3>
+        <button class="close-modal" onclick="closeModal('manageTeamModal')">×</button>
+      </div>
+      <div style="margin-bottom: var(--spacing-md);">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: var(--spacing-sm);">
+          Current Team Members:
+        </p>
+        <div class="team-members-list" id="teamMembersList" style="flex-wrap: wrap; display: flex; gap: 8px;">
+          <!-- Team member tags will be dynamically added here -->
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('manageTeamModal')">Close</button>
+        <button class="btn btn-primary" id="addTeamMemberBtn">➕ Add New Member</button>
+      </div>
+    </div>
   </div>
 
   <!-- Add/Edit Team Member Modal -->
@@ -103,22 +210,80 @@
     </div>
   </div>
 
-  <!-- Add/Edit Update Modal -->
-  <div class="modal" id="updateModal">
+  <!-- Daily View Modal (List of Items) -->
+  <div class="modal" id="dailyViewModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="updateModalTitle">Add Update</h3>
-        <button class="close-modal" onclick="closeModal('updateModal')">×</button>
+        <h3 id="dailyViewTitle">Daily Updates</h3>
+        <button class="close-modal" onclick="closeModal('dailyViewModal')">×</button>
+      </div>
+      <div id="dailyItemsList" class="daily-items-list">
+        <!-- Structured items will be rendered here -->
+      </div>
+      <div class="modal-actions" style="display: flex; justify-content: space-between; width: 100%;">
+        <button class="btn btn-secondary" onclick="deleteDailyUpdate()"
+          style="color: #ef4444; border-color: #ef444450;">Delete All</button>
+        <div>
+          <button class="btn btn-secondary" onclick="closeModal('dailyViewModal')">Close</button>
+          <button class="btn btn-primary" id="addUpdateItemBtn">➕ Add Item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Update Item Modal (Structured Form) -->
+  <div class="modal" id="updateItemModal" style="z-index: 1001;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="updateItemModalTitle">Add Update Item</h3>
+        <button class="close-modal" onclick="closeModal('updateItemModal')">×</button>
       </div>
       <div class="form-group">
-        <label for="updateContent">Updates (one per line)</label>
-        <textarea id="updateContent" placeholder="• Task 1&#10;• Task 2&#10;• Task 3"></textarea>
+        <label for="updateItemType">Type</label>
+        <select id="updateItemType">
+          <option value="Investors">Investors</option>
+          <option value="B2B Partners">B2B Partners</option>
+          <option value="Insurers">Insurers</option>
+          <option value="Regulators">Regulators</option>
+          <option value="Finance">Finance</option>
+          <option value="Sales">Sales</option>
+          <option value="Engineering">Engineering</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="updateItemTitle">Title *</label>
+        <input type="text" id="updateItemTitle" placeholder="Enter title" required>
+      </div>
+      <div class="form-group">
+        <label for="updateItemDescription">Description</label>
+        <textarea id="updateItemDescription" placeholder="Add details" style="min-height: 60px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="updateItemStatus">Status</label>
+        <select id="updateItemStatus">
+          <option value="not-started">Not Started</option>
+          <option value="in-progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="completed">Done</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="updateItemGoal">Related to Target (Optional)</label>
+        <select id="updateItemGoal">
+          <option value="">None</option>
+        </select>
+      </div>
+      <div class="form-group" id="updateItemBlockReasonGroup" style="display: none; animation: fadeIn 0.3s ease;">
+        <label for="updateItemBlockReason" style="color: #ef4444;">Block Reason</label>
+        <textarea id="updateItemBlockReason" placeholder="What is blocking this?"
+          style="border-color: #ef4444; min-height: 60px;"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteUpdateBtn" style="margin-right: auto; display: none;">🗑️
+        <button class="btn btn-secondary" id="deleteUpdateItemBtn" style="margin-right: auto; display: none;">🗑️
           Delete</button>
-        <button class="btn btn-secondary" onclick="closeModal('updateModal')">Cancel</button>
-        <button class="btn btn-primary" id="saveUpdateBtn">Save</button>
+        <button class="btn btn-secondary" onclick="closeModal('updateItemModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveUpdateItemBtn">Save</button>
       </div>
     </div>
   </div>
@@ -127,16 +292,28 @@
   <div class="modal" id="goalModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="goalModalTitle">Add Goal</h3>
+        <h3 id="goalModalTitle">Add Target</h3>
         <button class="close-modal" onclick="closeModal('goalModal')">×</button>
       </div>
       <div class="form-group">
-        <label for="goalTitle">Goal Title *</label>
-        <input type="text" id="goalTitle" placeholder="Enter goal title" required>
+        <label for="goalType">Target Type</label>
+        <select id="goalType">
+          <option value="Investors">Investors</option>
+          <option value="B2B Partners">B2B Partners</option>
+          <option value="Insurers">Insurers</option>
+          <option value="Regulators">Regulators</option>
+          <option value="Finance">Finance</option>
+          <option value="Sales">Sales</option>
+          <option value="Engineering">Engineering</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="goalTitle">Title *</label>
+        <input type="text" id="goalTitle" placeholder="Enter target title" required>
       </div>
       <div class="form-group">
         <label for="goalDescription">Description</label>
-        <textarea id="goalDescription" placeholder="Add more details about this goal"
+        <textarea id="goalDescription" placeholder="Add more details about this target"
           style="min-height: 80px;"></textarea>
       </div>
       <div class="form-group">
@@ -148,15 +325,65 @@
         <select id="goalStatus">
           <option value="not-started">Not Started</option>
           <option value="in-progress">In Progress</option>
-          <option value="completed">Completed</option>
           <option value="blocked">Blocked</option>
+          <option value="completed">Done</option>
         </select>
+      </div>
+      <div class="form-group" id="blockReasonGroup" style="display: none; animation: fadeIn 0.3s ease;">
+        <label for="goalBlockReason" style="color: #ef4444;">Block Reason</label>
+        <textarea id="goalBlockReason" placeholder="What is blocking this target?"
+          style="border-color: #ef4444; min-height: 60px;"></textarea>
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" id="deleteGoalBtn" style="margin-right: auto; display: none;">🗑️
           Delete</button>
         <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancel</button>
         <button class="btn btn-primary" id="saveGoalBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Leave Modal -->
+  <div class="modal" id="leaveModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="leaveModalTitle">Add Leave</h3>
+        <button class="close-modal" onclick="closeModal('leaveModal')">×</button>
+      </div>
+      <div class="form-group">
+        <label for="leaveMember">Team Member</label>
+        <select id="leaveMember">
+          <option value="">Select Team Member</option>
+        </select>
+      </div>
+      <div class="form-group-row" style="display: flex; gap: var(--spacing-md);">
+        <div class="form-group" style="flex: 1;">
+          <label for="leaveStartDate">Start Date</label>
+          <input type="date" id="leaveStartDate">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="leaveEndDate">End Date</label>
+          <input type="date" id="leaveEndDate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="leaveType">Type</label>
+        <select id="leaveType">
+          <option value="holiday">🏖️ Holiday</option>
+          <option value="sick">🤒 Sick Leave</option>
+          <option value="personal">🏠 Personal</option>
+          <option value="other">📅 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="leaveDescription">Description (Optional)</label>
+        <textarea id="leaveDescription" placeholder="Any details..." style="min-height: 60px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="deleteLeaveBtn" style="margin-right: auto; display: none;">🗑️
+          Delete</button>
+        <button class="btn btn-secondary" onclick="closeModal('leaveModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveLeaveBtn">Save</button>
       </div>
     </div>
   </div>
@@ -195,6 +422,50 @@
     </div>
   </div>
 
+  <!-- Change Password Modal -->
+  <div class="modal" id="changePasswordModal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3>Change Password</h3>
+        <button class="close-modal" id="cancelChangePasswordBtnXs">×</button>
+      </div>
+      <div class="form-group" style="margin-top: 1rem;">
+        <label>Current Password</label>
+        <input type="password" id="changeOldPassword" placeholder="Enter current password">
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="changeNewPassword" placeholder="Enter new password">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="changeConfirmPassword" placeholder="Confirm new password">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelChangePasswordBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveChangePasswordBtn">Update</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holiday Calendar Modal -->
+  <div class="modal" id="holidayCalendarModal">
+    <div class="modal-content"
+      style="max-width: 900px; width: 90%; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3>Upcoming Holidays (6 Months)</h3>
+        <button class="close-modal" onclick="closeModal('holidayCalendarModal')">×</button>
+      </div>
+      <div class="calendar-container" id="holidayCalendarContainer" style="overflow-y: auto; flex: 1; padding: 1rem;">
+        <!-- Calendar grid will be rendered here -->
+        <p style="text-align: center; color: var(--text-muted);">Loading calendar...</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('holidayCalendarModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Export Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -203,6 +474,88 @@
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    // Theme Management
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        btn.title = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+      }
+      // Swap logos based on theme
+      const logoDark = document.getElementById('logo-dark');
+      const logoLight = document.getElementById('logo-light');
+      if (logoDark && logoLight) {
+        logoDark.style.display = theme === 'dark' ? 'block' : 'none';
+        logoLight.style.display = theme === 'light' ? 'block' : 'none';
+      }
+    }
+
+    // Initialize theme immediately
+    initTheme();
+
+    // Protect Route
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check session
+      const session = await window.auth.protectRoute();
+      if (!session) return; // Will redirect
+
+      // Setup Sign Out
+      document.getElementById('signOutBtn').addEventListener('click', async () => {
+        await window.auth.signOut();
+      });
+
+      // Setup Theme Toggle
+      document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+      // Initialize World Clocks
+      initClocks();
+    });
+
+    // World Clocks Logic
+    function initClocks() {
+      updateClocks();
+      setInterval(updateClocks, 1000);
+    }
+
+    function updateClocks() {
+      const clocks = document.querySelectorAll('.analog-clock');
+      clocks.forEach(clock => {
+        const timezone = clock.dataset.timezone;
+        const now = new Date();
+        const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+        const timeString = now.toLocaleTimeString('en-US', options);
+        const [hours, minutes, seconds] = timeString.split(':').map(Number);
+
+        const hourHand = clock.querySelector('.hour-hand');
+        const minuteHand = clock.querySelector('.minute-hand');
+        const secondHand = clock.querySelector('.second-hand');
+
+        const hourDeg = (hours % 12) * 30 + minutes * 0.5;
+        const minuteDeg = minutes * 6 + seconds * 0.1;
+        const secondDeg = seconds * 6;
+
+        hourHand.style.transform = `rotate(${hourDeg}deg)`;
+        minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
+        secondHand.style.transform = `rotate(${secondDeg}deg)`;
+      });
+    }
+  </script>
 
   <script src="app.js"></script>
 </body>

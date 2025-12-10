@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Daily Standup Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+            transform: scale(1.05);
+        }
+
+        .login-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+        }
+
+        [data-theme="light"] .login-logo {
+            filter: none;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            min-height: 20px;
+            display: none;
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite ease-in-out;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <button class="theme-toggle" id="themeToggleBtn" title="Toggle Theme">🌙</button>
+        <img src="public/rommaana-logo-white.png" alt="Logo" class="login-logo" id="logo-dark">
+        <img src="public/Rommaana-Original.png" alt="Logo" class="login-logo" id="logo-light" style="display: none;">
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Sign in to access your standup tracker</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="name@company.com" required autocomplete="email">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" required
+                    autocomplete="current-password">
+                <a href="#" id="forgotPasswordLink"
+                    style="font-size: 0.8rem; color: var(--accent-primary); float: right; margin-top: 0.5rem; text-decoration: none;">Forgot
+                    Password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-large" id="loginBtn" style="margin-top: 2rem;">Sign
+                In</button>
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="login-card" style="max-width: 350px;">
+            <h3>Reset Password</h3>
+            <p class="subtitle" style="margin-bottom: 1rem;">Enter your email to receive a reset link</p>
+            <div class="form-group">
+                <input type="email" id="resetEmail" placeholder="name@company.com">
+            </div>
+            <button class="btn btn-primary btn-large" id="sendResetBtn">Send Link</button>
+            <button class="btn btn-secondary btn-large" id="cancelResetBtn" style="margin-top: 0.5rem;">Cancel</button>
+            <div id="resetMessage" style="margin-top: 1rem; font-size: 0.85rem;"></div>
+        </div>
+    </div>
+
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+        // Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+                btn.title = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            }
+            // Swap logos based on theme
+            const logoDark = document.getElementById('logo-dark');
+            const logoLight = document.getElementById('logo-light');
+            if (logoDark && logoLight) {
+                logoDark.style.display = theme === 'dark' ? 'block' : 'none';
+                logoLight.style.display = theme === 'light' ? 'block' : 'none';
+            }
+        }
+
+        // Initialize theme immediately
+        initTheme();
+
+        // Setup theme toggle
+        document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await window.auth.getSession();
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Handle Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('errorMessage');
+
+            errorDiv.style.display = 'none';
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                const { error } = await window.auth.signIn(email, password);
+
+                if (error) {
+                    throw error;
+                }
+
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Failed to sign in';
+                errorDiv.style.display = 'block';
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        });
+
+        // Forgot Password Logic
+        const forgotLink = document.getElementById('forgotPasswordLink');
+        const forgotModal = document.getElementById('forgotPasswordModal');
+        const cancelResetBtn = document.getElementById('cancelResetBtn');
+        const sendResetBtn = document.getElementById('sendResetBtn');
+        const resetMessage = document.getElementById('resetMessage');
+
+        if (forgotLink) {
+            forgotLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                forgotModal.style.display = 'flex';
+                resetMessage.textContent = '';
+                resetMessage.style.color = 'inherit';
+            });
+        }
+
+        if (cancelResetBtn) {
+            cancelResetBtn.addEventListener('click', () => {
+                forgotModal.style.display = 'none';
+            });
+        }
+
+        if (sendResetBtn) {
+            sendResetBtn.addEventListener('click', async () => {
+                const email = document.getElementById('resetEmail').value;
+                if (!email) {
+                    resetMessage.textContent = 'Please enter your email';
+                    resetMessage.style.color = '#ef4444';
+                    return;
+                }
+
+                sendResetBtn.disabled = true;
+                sendResetBtn.textContent = 'Sending...';
+
+                try {
+                    const { error } = await window.auth.sendPasswordReset(email);
+                    if (error) throw error;
+                    resetMessage.textContent = 'Check your email for the reset link!';
+                    resetMessage.style.color = '#48bb78';
+                } catch (e) {
+                    resetMessage.textContent = e.message;
+                    resetMessage.style.color = '#ef4444';
+                } finally {
+                    sendResetBtn.disabled = false;
+                    sendResetBtn.textContent = 'Send Link';
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
