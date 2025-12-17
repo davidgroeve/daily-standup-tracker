@@ -85,16 +85,36 @@
         </div>
       </div>
 
-      <div style="display: flex; gap: var(--spacing-sm);">
-        <a href="analytics.html" class="btn btn-secondary">📊 Analytics</a>
-        <a href="activity.html" class="btn btn-secondary">📝 Activity</a>
-        <button class="btn btn-secondary" id="changePasswordBtn">🔑 Change Password</button>
+      <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
         <button class="btn btn-secondary btn-icon" id="themeToggleBtn" title="Toggle Theme">
           🌙
         </button>
-        <button class="btn btn-secondary" id="signOutBtn" style="border-color: #ef4444; color: #ef4444;">
-          Sign Out
-        </button>
+
+        <!-- Button Box Menu -->
+        <div class="button-box" id="headerButtonBox">
+          <!-- Touch Zones -->
+          <div class="touch left" id="touchAnalytics" title="Analytics"></div>
+          <div class="touch middle" id="touchMenu" title="Menu"></div>
+          <div class="touch right" id="touchActivity" title="Activity"></div>
+
+          <!-- Buttons (Orange, Yellow, Green) -->
+          <div class="button" id="btnAnalytics">
+            <span class="icon">📊</span>
+          </div>
+          <div class="button" id="btnActivity">
+            <span class="icon">📝</span>
+          </div>
+          <div class="button" id="btnMenu">
+            <span class="icon">⚙️</span>
+          </div>
+        </div>
+
+        <!-- Hidden Dropdown for Menu (Green Button) -->
+        <div class="dropdown-menu" id="greenButtonMenu">
+          <button class="dropdown-item" id="changePasswordBtn">🔑 Change Password</button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item danger" id="signOutBtn">Sign Out</button>
+        </div>
       </div>
     </div>
   </header>
@@ -221,8 +241,13 @@
         <!-- Structured items will be rendered here -->
       </div>
       <div class="modal-actions" style="display: flex; justify-content: space-between; width: 100%;">
-        <button class="btn btn-secondary" onclick="deleteDailyUpdate()"
-          style="color: #ef4444; border-color: #ef444450;">Delete All</button>
+        <button class="btn-delete-anim" onclick="deleteDailyUpdate()">
+          <svg viewBox="0 0 448 512" class="svgIcon">
+            <path
+              d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+            </path>
+          </svg>
+        </button>
         <div>
           <button class="btn btn-secondary" onclick="closeModal('dailyViewModal')">Close</button>
           <button class="btn btn-primary" id="addUpdateItemBtn">➕ Add Item</button>
@@ -280,8 +305,13 @@
           style="border-color: #ef4444; min-height: 60px;"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteUpdateItemBtn" style="margin-right: auto; display: none;">🗑️
-          Delete</button>
+        <button class="btn-delete-anim" id="deleteUpdateItemBtn" style="display: none;">
+          <svg viewBox="0 0 448 512" class="svgIcon">
+            <path
+              d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+            </path>
+          </svg>
+        </button>
         <button class="btn btn-secondary" onclick="closeModal('updateItemModal')">Cancel</button>
         <button class="btn btn-primary" id="saveUpdateItemBtn">Save</button>
       </div>
@@ -335,8 +365,13 @@
           style="border-color: #ef4444; min-height: 60px;"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteGoalBtn" style="margin-right: auto; display: none;">🗑️
-          Delete</button>
+        <button class="btn-delete-anim" id="deleteGoalBtn" style="display: none;">
+          <svg viewBox="0 0 448 512" class="svgIcon">
+            <path
+              d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+            </path>
+          </svg>
+        </button>
         <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cancel</button>
         <button class="btn btn-primary" id="saveGoalBtn">Save</button>
       </div>
@@ -380,8 +415,13 @@
         <textarea id="leaveDescription" placeholder="Any details..." style="min-height: 60px;"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="deleteLeaveBtn" style="margin-right: auto; display: none;">🗑️
-          Delete</button>
+        <button class="btn-delete-anim" id="deleteLeaveBtn" style="display: none;">
+          <svg viewBox="0 0 448 512" class="svgIcon">
+            <path
+              d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+            </path>
+          </svg>
+        </button>
         <button class="btn btn-secondary" onclick="closeModal('leaveModal')">Cancel</button>
         <button class="btn btn-primary" id="saveLeaveBtn">Save</button>
       </div>
@@ -525,6 +565,45 @@
 
       // Initialize World Clocks
       initClocks();
+
+      // Setup Button Box Interactions
+      const touchAnalytics = document.getElementById('touchAnalytics');
+      const touchActivity = document.getElementById('touchActivity');
+      const touchMenu = document.getElementById('touchMenu');
+      const greenButtonMenu = document.getElementById('greenButtonMenu');
+
+      if (touchAnalytics) {
+        touchAnalytics.addEventListener('click', () => {
+          window.location.href = 'analytics.html';
+        });
+      }
+
+      if (touchActivity) {
+        touchActivity.addEventListener('click', () => {
+          window.location.href = 'activity.html';
+        });
+      }
+
+      if (touchMenu && greenButtonMenu) {
+        touchMenu.addEventListener('click', (e) => {
+          e.stopPropagation();
+          greenButtonMenu.classList.toggle('show');
+
+          // Position the menu below the green button
+          // Since the button box is relative, we might need to adjust top/left
+          // For now, let's rely on standard dropdown positioning or adjust via CSS
+          // A simple fix to ensure it appears under the box:
+          greenButtonMenu.style.top = '100%';
+          greenButtonMenu.style.right = '0';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!greenButtonMenu.contains(e.target) && !touchMenu.contains(e.target)) {
+            greenButtonMenu.classList.remove('show');
+          }
+        });
+      }
     });
 
     // World Clocks Logic
