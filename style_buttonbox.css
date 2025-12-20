@@ -1,7 +1,7 @@
 /* Button Box Menu (User Request) */
 .button-box {
     position: relative;
-    width: 12rem;
+    width: 15rem; /* Increased from 12rem */
     height: 5rem;
     display: flex;
 }
@@ -29,36 +29,41 @@
     opacity: 0.7;
     transition: 0.25s;
     font-size: 1.2rem;
-    /* Ensure emoji icons are visible */
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    /* Ensure visibility on colors */
 }
 
-.button-box .button:nth-child(4) {
+/* Button 1: Analytics (Far Left) */
+.button-box .button:nth-child(5) {
     transform: translate(-50%, -50%) rotate(90deg);
     z-index: 30;
-    background: #ff7f50;
-    /* Orange - Analytics */
+    background: #ff7f50; /* Orange */
 }
 
-.button-box .button:nth-child(5) {
+/* Button 2: Roadmap (Mid Left) */
+.button-box .button:nth-child(6) {
+    transform: translate(-50%, -50%) rotate(45deg);
+    z-index: 35;
+    background: #8b5cf6; /* Purple */
+}
+
+/* Button 3: Activity (Mid Right) */
+.button-box .button:nth-child(7) {
     transform: translate(-50%, -50%) rotate(-115deg);
     z-index: 40;
-    background: #ffd700;
-    /* Yellow - Activity */
+    background: #ffd700; /* Yellow */
 }
 
-.button-box .button:nth-child(6) {
+/* Button 4: Menu (Far Right) */
+.button-box .button:nth-child(8) {
     transform: translate(-50%, -50%) rotate(-45deg);
     z-index: 50;
-    background: #019b98;
-    /* Green - Menu */
+    background: #019b98; /* Green */
 }
 
-.button-box .button:nth-child(6) .icon {
+.button-box .button:nth-child(8) .icon {
     animation: active 2.2s linear infinite;
 }
 
@@ -71,62 +76,64 @@
 }
 
 /* Touch Zones Interactions */
-.button-box .touch.left:hover~.button:nth-child(4) {
+.button-box .touch.far-left:hover~.button:nth-child(5) {
     opacity: 1;
-    transform: translate(-170%, -50%) rotate(-90deg) scale(1.05);
+    transform: translate(-220%, -50%) rotate(-90deg) scale(1.05);
 }
 
-.button-box .touch.left:hover~.button:nth-child(4) .icon {
-    width: 25px;
+.button-box .touch.far-left:hover~.button:nth-child(5) .icon {
     opacity: 0.9;
 }
 
-.button-box .touch.left:active~.button:nth-child(4) {
-    transform: translate(-170%, -50%) rotate(-90deg) scale(0.9);
+.button-box .touch.far-left:active~.button:nth-child(5) {
+    transform: translate(-220%, -50%) rotate(-90deg) scale(0.9);
 }
 
-.button-box .touch.right:hover~.button:nth-child(5) {
+.button-box .touch.left:hover~.button:nth-child(6) {
     opacity: 1;
-    transform: translate(70%, -50%) rotate(90deg) scale(1.05);
+    transform: translate(-120%, -50%) rotate(0deg) scale(1.05);
 }
 
-.button-box .touch.right:hover~.button:nth-child(5) .icon {
-    width: 25px;
-    opacity: 0.9;
+.button-box .touch.left:active~.button:nth-child(6) {
+    transform: translate(-120%, -50%) rotate(0deg) scale(0.9);
 }
 
-.button-box .touch.right:active~.button:nth-child(5) {
-    transform: translate(70%, -50%) rotate(90deg) scale(0.9);
-}
-
-.button-box .touch.middle:hover~.button:nth-child(6) {
+.button-box .touch.right:hover~.button:nth-child(7) {
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(0deg) scale(1.05);
+    transform: translate(20%, -50%) rotate(90deg) scale(1.05);
 }
 
-.button-box .touch.middle:hover~.button:nth-child(6) .icon {
-    width: 25px;
-    opacity: 0.9;
+.button-box .touch.right:active~.button:nth-child(7) {
+    transform: translate(20%, -50%) rotate(90deg) scale(0.9);
 }
 
-.button-box .touch.middle:active~.button:nth-child(6) {
-    transform: translate(-50%, -50%) rotate(0deg) scale(0.9);
+.button-box .touch.middle:hover~.button:nth-child(8) {
+    opacity: 1;
+    transform: translate(120%, -50%) rotate(0deg) scale(1.05);
+}
+
+.button-box .touch.middle:active~.button:nth-child(8) {
+    transform: translate(120%, -50%) rotate(0deg) scale(0.9);
 }
 
 /* Container Hover Interactions */
-.button-box:hover .button:nth-child(4) {
-    transform: translate(-170%, -50%) rotate(-90deg);
-}
-
 .button-box:hover .button:nth-child(5) {
-    transform: translate(70%, -50%) rotate(90deg);
+    transform: translate(-220%, -50%) rotate(-90deg);
 }
 
 .button-box:hover .button:nth-child(6) {
-    transform: translate(-50%, -50%) rotate(0deg);
+    transform: translate(-120%, -50%) rotate(0deg);
 }
 
-.button-box:hover .button:nth-child(6) .icon {
+.button-box:hover .button:nth-child(7) {
+    transform: translate(20%, -50%) rotate(90deg);
+}
+
+.button-box:hover .button:nth-child(8) {
+    transform: translate(120%, -50%) rotate(0deg);
+}
+
+.button-box:hover .button:nth-child(8) .icon {
     animation: active 4s linear infinite;
 }
 

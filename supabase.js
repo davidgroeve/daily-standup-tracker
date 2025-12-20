@@ -342,6 +342,70 @@
                 return [];
             }
             return data || [];
+        },
+
+        // Roadmap Tasks
+        async getRoadmapTasks() {
+            const { data, error } = await window.supabaseClient
+                .from('roadmap_tasks')
+                .select('*')
+                .order('start_date', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching roadmap tasks:', error);
+                return [];
+            }
+            return data || [];
+        },
+
+        async createRoadmapTask(task, userEmail) {
+            userEmail = userEmail || 'Unknown';
+            const { data, error } = await window.supabaseClient
+                .from('roadmap_tasks')
+                .insert([task])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error creating roadmap task:', error);
+                throw error;
+            }
+
+            await this.logChange(userEmail, 'roadmap_task', data.id, 'create', 'Created roadmap task: ' + task.title);
+            return data;
+        },
+
+        async updateRoadmapTask(id, updates, userEmail) {
+            userEmail = userEmail || 'Unknown';
+            const { data, error } = await window.supabaseClient
+                .from('roadmap_tasks')
+                .update(updates)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error updating roadmap task:', error);
+                throw error;
+            }
+
+            await this.logChange(userEmail, 'roadmap_task', id, 'update', 'Updated roadmap task: ' + (updates.title || 'details'));
+            return data;
+        },
+
+        async deleteRoadmapTask(id, userEmail) {
+            userEmail = userEmail || 'Unknown';
+            const { error } = await window.supabaseClient
+                .from('roadmap_tasks')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error deleting roadmap task:', error);
+                throw error;
+            }
+
+            await this.logChange(userEmail, 'roadmap_task', id, 'delete', 'Deleted roadmap task');
         }
     };
 })();

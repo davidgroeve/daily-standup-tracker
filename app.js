@@ -3,6 +3,7 @@ let state = {
   teamMembers: [],
   updates: {}, // { memberId_date: { content: [...], timestamp: '' } }
   goals: [],
+  roadmapTasks: [],
   leaves: [],
   currentWeekStart: null,
   editingMember: null,
@@ -72,6 +73,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadAndRenderChangeLogs();
     });
   }
+
+  // Header Nav & Leaves Interaction
+  document.body.addEventListener('click', (e) => {
+    if (e.target.id === 'prevWeekBtn') navigateWeek(-1);
+    if (e.target.id === 'nextWeekBtn') navigateWeek(1);
+
+    const leavesTrigger = e.target.closest('#header-right-col');
+    if (leavesTrigger) {
+      openLeavesDetailModal();
+    }
+  });
 
 
   // Change Password Logic
@@ -211,6 +223,9 @@ async function loadDataFromDB() {
 
     // Load leaves
     state.leaves = await window.db.getLeaves();
+
+    // Load roadmap tasks
+    state.roadmapTasks = await window.db.getRoadmapTasks();
   } catch (error) {
     console.error('Error loading data from database:', error);
     // Fallback to localStorage if DB fails
@@ -275,6 +290,20 @@ function renderAll() {
   renderGoals();
   renderLeaves();
   loadAndRenderChangeLogs();
+}
+
+function getTaskProgress(task) {
+  const children = state.roadmapTasks.filter(c => c.parent_id === task.id);
+  if (children.length === 0) return task.progress || 0;
+  const total = children.reduce((sum, child) => sum + getTaskProgress(child), 0);
+  return Math.round(total / children.length);
+}
+
+// Helper to parse 'YYYY-MM-DD' as local date midnight
+function parseLocal(str) {
+  if (!str) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
 async function loadAndRenderChangeLogs() {
@@ -347,8 +376,9 @@ function renderLeaves() {
   weekEnd.setHours(23, 59, 59, 999);
 
   const activeLeaves = state.leaves.filter(leave => {
-    const start = new Date(leave.start_date);
-    const end = new Date(leave.end_date);
+    const start = parseLocal(leave.start_date);
+    const end = parseLocal(leave.end_date);
+    if (!start || !end) return false;
     // Determine overlap: (StartA <= EndB) and (EndA >= StartB)
     return start <= weekEnd && end >= weekStart;
   });
@@ -362,10 +392,14 @@ function renderLeaves() {
   if (!container) return; // Guard clause in case element doesn't exist yet
 
   if (activeLeaves.length === 0) {
-    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No leaves this week.</p>';
-    // Keep badge at 0 if no leaves
+    if (container) container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No leaves this week.</p>';
+    renderLeavesInHeader([]);
     return;
   }
+
+  renderLeavesInHeader(activeLeaves);
+
+  if (!container) return;
 
   const typeColors = {
     'holiday': '#FFB5C5', // Pinkish
@@ -408,6 +442,119 @@ function renderLeaves() {
     </div>
   `;
   }).join('');
+}
+
+function renderLeavesInHeader(activeLeaves) {
+  const container = document.getElementById('header-right-col');
+  if (!container) return;
+
+  if (activeLeaves.length === 0) {
+    container.innerHTML = `
+      <div class="header-leaf-preview empty" title="No leaves this week">
+        🏖️ <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted); padding: 0 8px; border-radius: 10px; font-size: 0.75rem;">None</span>
+      </div>
+    `;
+    return;
+  }
+
+  // Calculate unique people and total overlap days
+  const weekStart = new Date(state.currentWeekStart);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const uniquePeople = new Set(activeLeaves.map(l => l.member_id)).size;
+  let totalPersonDays = 0;
+
+  activeLeaves.forEach(l => {
+    const start = parseLocal(l.start_date);
+    const end = parseLocal(l.end_date);
+    if (!start || !end) return;
+
+    const overlapStart = start < weekStart ? weekStart : start;
+    const overlapEnd = end > weekEnd ? weekEnd : end;
+
+    if (overlapStart <= overlapEnd) {
+      const diffTime = Math.abs(overlapEnd - overlapStart);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      totalPersonDays += diffDays;
+    }
+  });
+
+  // Show first 3 leave members as avatars
+  const memberPreviews = activeLeaves.slice(0, 3).map(l => {
+    const name = l.team_members?.name || 'Unknown';
+    const color = l.team_members?.color || 'var(--accent-primary)';
+    const initial = name[0].toUpperCase();
+    return `<div class="header-leaf-avatar" style="background: ${color};" title="${name} is on ${l.type}">${initial}</div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="header-leaf-preview active">
+        <div class="avatar-stack">${memberPreviews}</div>
+        <div class="header-leaf-info" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-left: 4px;">
+          ${uniquePeople} ${uniquePeople === 1 ? 'Person' : 'People'} • ${totalPersonDays} ${totalPersonDays === 1 ? 'Day' : 'Days'}
+        </div>
+    </div>
+  `;
+}
+
+function openLeavesDetailModal() {
+  const modal = document.getElementById('leavesDetailModal');
+  if (!modal) {
+    // Create it if it doesn't exist? Or wait until next step to add to HTML.
+    // I'll add it to index.html in next step.
+    console.warn('Leaves detail modal not found in DOM');
+  }
+  showModal('leavesDetailModal');
+
+  const container = document.getElementById('leavesDetailList');
+  if (!container) return;
+
+  // Filter leaves as in renderLeaves
+  const weekStart = new Date(state.currentWeekStart);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const activeLeaves = state.leaves.filter(leave => {
+    const start = new Date(leave.start_date);
+    const end = new Date(leave.end_date);
+    return start <= weekEnd && end >= weekStart;
+  });
+
+  if (activeLeaves.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No leaves this week.</p>';
+  } else {
+    container.innerHTML = activeLeaves.map(leave => {
+      const memberName = leave.team_members ? leave.team_members.name : 'Unknown';
+      const memberColor = leave.team_members ? leave.team_members.color : '#ccc';
+      const startDate = new Date(leave.start_date);
+      const endDate = new Date(leave.end_date);
+      const dateStr = startDate.toDateString() === endDate.toDateString()
+        ? formatDate(startDate)
+        : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+
+      const typeEmojis = { 'holiday': '🏖️', 'sick': '🤒', 'personal': '🏠', 'other': '📅' };
+
+      return `
+        <div class="leave-detail-item" style="border-left: 4px solid ${memberColor}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-weight: 700; font-size: 1rem; color: var(--text-primary);">${memberName}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+                ${typeEmojis[leave.type] || '📅'} ${leave.type.toUpperCase()} • ${dateStr}
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-small" onclick="editLeave('${leave.id}')">Edit</button>
+          </div>
+          ${leave.description ? `<p style="margin-top: 8px; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4;">${leave.description}</p>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 function renderGrid() {
@@ -506,10 +653,50 @@ function renderGrid() {
 function renderGoals() {
   const container = document.getElementById('goalsList');
   const countBadge = document.getElementById('goalsCount');
-  if (countBadge) countBadge.textContent = state.goals.length;
 
-  if (state.goals.length === 0) {
-    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No goals set for this week. Click "Add Goal" to get started!</p>';
+  // Calculate current week range
+  const weekStart = new Date(state.currentWeekStart);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 4); // Sunday to Thursday (matching grid)
+  weekEnd.setHours(23, 59, 59, 999);
+
+  // Filter roadmap tasks that are strictly within this week and are NOT parent tasks
+  const activeRoadmapTasks = state.roadmapTasks.filter(task => {
+    const taskStart = parseLocal(task.start_date);
+    const taskEnd = parseLocal(task.end_date);
+    if (!taskStart || !taskEnd) return false;
+
+    // Strict containment: Task must start on or after weekStart AND end on or before weekEnd
+    // Range: 2025-12-21 (Sunday) to 2025-12-25 (Thursday)
+    const isInRange = taskStart >= weekStart && taskEnd <= weekEnd;
+
+    // Leaf task check: Must not be a parent to any other task
+    const isLeaf = !state.roadmapTasks.some(t => t.parent_id === task.id);
+
+    return isInRange && isLeaf;
+  });
+
+  // Also include manual goals if any (optional, but keep for compatibility)
+  const allGoals = [
+    ...activeRoadmapTasks.map(task => ({
+      id: `task_${task.id}`,
+      title: task.title,
+      description: task.description || '',
+      owner: task.assigned_to || '',
+      status: task.progress === 100 ? 'completed' : (task.progress > 0 ? 'in-progress' : 'not-started'),
+      type: 'Roadmap',
+      progress: task.progress,
+      isRoadmap: true,
+      originalTask: task
+    })),
+    ...state.goals.map(g => ({ ...g, isRoadmap: false }))
+  ];
+
+  if (countBadge) countBadge.textContent = allGoals.length;
+
+  if (allGoals.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No goals or roadmap tasks for this week.</p>';
     return;
   }
 
@@ -523,36 +710,49 @@ function renderGoals() {
   const statusLabels = {
     'not-started': 'Not Started',
     'in-progress': 'In Progress',
-    'completed': 'Completed',
+    'completed': 'Done',
     'blocked': 'Blocked'
   };
 
-  container.innerHTML = state.goals.map((goal, index) => {
+  container.innerHTML = allGoals.map((goal) => {
     const title = goal.title || '';
     const description = goal.description || '';
     const owner = goal.owner || '';
     const status = goal.status || 'not-started';
     const type = goal.type || 'General';
     const blockReason = goal.block_reason || '';
+    const isRoadmap = goal.isRoadmap;
+    const progress = isRoadmap ? getTaskProgress(goal.originalTask) : 0;
+    const mappedStatus = isRoadmap ? (progress === 100 ? 'completed' : (progress > 0 ? 'in-progress' : 'not-started')) : status;
 
     return `
-    <div class="goal-card" onclick="editGoal(${index})">
+    <div class="goal-card ${isRoadmap ? 'roadmap-goal' : ''}" ${isRoadmap ? `onclick="window.location.href='roadmap.html'"` : `onclick="editGoal('${goal.id}')"`}>
+      ${!isRoadmap ? `
       <div class="goal-actions">
-        <button class="btn btn-secondary btn-small btn-icon" onclick="event.stopPropagation(); removeGoal(${index})" title="Remove">×</button>
-      </div>
+        <button class="btn btn-secondary btn-small btn-icon" onclick="event.stopPropagation(); removeGoal('${goal.id}')" title="Remove">×</button>
+      </div>` : ''}
       <div class="goal-header-badges" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span class="goal-type-badge" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${type}</span>
-        <div class="goal-status-badge" style="background: ${statusColors[status]};">
-            ${statusLabels[status]}
+        <span class="goal-type-badge" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+          ${isRoadmap ? '🗺️ Roadmap' : type}
+        </span>
+        <div class="goal-status-badge" style="background: ${statusColors[mappedStatus]};">
+            ${isRoadmap ? `${progress}%` : statusLabels[status]}
         </div>
       </div>
-      <h4 class="goal-title">${title}</h4>
+      <h4 class="goal-title" style="${isRoadmap ? 'color: var(--accent-primary);' : ''}">${title}</h4>
       ${description ? `<p class="goal-description">${description}</p>` : ''}
       ${status === 'blocked' && blockReason ?
         `<div class="goal-block-reason" style="background: rgba(245, 101, 101, 0.1); border-left: 2px solid #f56565; padding: 8px; margin: 8px 0; font-size: 0.85rem; color: #f56565;">
            🛑 <b>Blocked:</b> ${blockReason}
          </div>` : ''}
-      ${owner ? `<p class="goal-owner">👤 ${owner}</p>` : ''}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+        ${owner ? `<p class="goal-owner" style="margin:0;">👤 ${owner}</p>` : '<span></span>'}
+        ${isRoadmap ? `
+          <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="width: ${progress}%; height: 100%; background: var(--accent-primary); border-radius: 3px;"></div>
+          </div>
+        ` : ''}
+      </div>
     </div>
   `;
   }).join('');
@@ -865,9 +1065,10 @@ function openGoalModal() {
   showModal('goalModal');
 }
 
-function editGoal(index) {
-  state.editingGoal = index;
-  const goal = state.goals[index];
+function editGoal(id) {
+  state.editingGoal = id;
+  const goal = state.goals.find(g => g.id === id);
+  if (!goal) return;
 
   document.getElementById('goalModalTitle').textContent = 'Edit Target';
   document.getElementById('goalType').value = goal.type || 'Investors';
@@ -912,9 +1113,10 @@ async function saveGoal() {
   try {
     if (state.editingGoal !== null) {
       // Update existing goal
-      const goalId = state.goals[state.editingGoal].id;
+      const goalId = state.editingGoal;
       await window.db.updateGoal(goalId, goalData, state.currentUserEmail);
-      state.goals[state.editingGoal] = { ...state.goals[state.editingGoal], ...goalData };
+      const idx = state.goals.findIndex(g => g.id === goalId);
+      if (idx !== -1) state.goals[idx] = { ...state.goals[idx], ...goalData };
     } else {
       // Create new goal
       const newGoal = await window.db.createGoal(goalData, weekStart, state.currentUserEmail);
@@ -929,16 +1131,14 @@ async function saveGoal() {
   }
 }
 
-async function removeGoal(index) {
+async function removeGoal(id) {
   if (!confirm('Are you sure you want to remove this goal?')) {
     return;
   }
 
   try {
-    const goalId = state.goals[index].id;
-    await window.db.deleteGoal(goalId, state.currentUserEmail);
-
-    state.goals.splice(index, 1);
+    await window.db.deleteGoal(id, state.currentUserEmail);
+    state.goals = state.goals.filter(g => g.id !== id);
     renderAll();
   } catch (error) {
     console.error('Error removing goal:', error);
