@@ -1433,10 +1433,6 @@ function closeModal(modalId) {
 
 // Event Listeners
 function attachEventListeners() {
-  // Week navigation
-  document.getElementById('prevWeekBtn').addEventListener('click', () => navigateWeek(-1));
-  document.getElementById('nextWeekBtn').addEventListener('click', () => navigateWeek(1));
-
   // Team Management
   document.getElementById('manageTeamBtn').addEventListener('click', () => showModal('manageTeamModal'));
   document.getElementById('addTeamMemberBtn').addEventListener('click', openTeamMemberModal);
