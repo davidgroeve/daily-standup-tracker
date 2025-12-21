@@ -1,147 +1,63 @@
-# 📋 Daily Standup Tracker
+# Daily Standup Tracker 🚀
 
-A beautiful, modern web application for tracking daily standup meetings with your team. Features a weekly grid view, team member management, and goals tracking with local storage persistence.
+A modern, web-based application for managing daily team standups, project roadmaps, and team productivity charts. Built with efficiency and aesthetics in mind.
 
-## ✨ Features
+## 🌟 Key Features
 
-- **Weekly Grid View**: Visualize the entire week (Monday-Friday) at a glance
-- **Team Member Management**: Add, edit, and remove team members with color-coded cards
-- **Daily Updates**: Click any cell to add or edit daily standup updates
-- **Goals & Targets**: Track weekly goals and objectives
-- **Week Navigation**: Easily navigate between weeks
-- **Local Storage**: All data is automatically saved in your browser
-- **Modern Design**: Dark theme with glassmorphism effects and smooth animations
-- **Responsive**: Works on desktop, tablet, and mobile devices
+*   **Daily Standup Grid:** Visualize team updates for the entire week. Add updates, blockers, and link them to goals.
+*   **Project Roadmap (Gantt):** visual timeline of project milestones with progress tracking and dependencies.
+*   **Team Insights:** Analytics dashboard showing velocity, blocker trends, goal alignment, and workload distribution.
+*   **Activity Log:** Track changes and updates across the platform.
+*   **Team Management:** Manage team members and their roles (Accessible via User Profile).
+*   **Secure:** Authentication and Data Persistence powered by Supabase.
+
+## 📂 Project Structure
+
+The project is organized into a clean directory structure:
+
+*   **`js/`**: Core JavaScript logic.
+    *   `app.js`: Main dashboard logic (Standup grid, Copy/Paste, State management).
+    *   `roadmap.js`: Gantt chart and milestone logic.
+    *   `supabase.js`: Supabase client configuration.
+    *   `auth.js`: Authentication wrappers.
+    *   `header.js`: Dynamic header injection and navigation logic.
+*   **`css/`**: Styling.
+    *   `style.css`: Main stylesheet containing the Design System (Variables, Glassmorphism, Components).
+*   **`public/`**: Static assets (Images, Logos).
+*   **Root Directory**:
+    *   `index.html`: Main Standup Dashboard.
+    *   `roadmap.html`: Roadmap View.
+    *   `analytics.html`: Analytics Dashboard.
+    *   `activity.html`: Activity Log.
+    *   `login.html`: Authentication Page.
 
 ## 🚀 Getting Started
 
-### Option 1: Open Locally
-Simply open `index.html` in your web browser. That's it!
+No build process is required! The application is built with standard HTML, CSS, and Vanilla JavaScript.
 
-### Option 2: Use a Local Server
-For the best experience, use a local server:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-repo/daily-standup-tracker.git
+    ```
+2.  **Serve the directory:**
+    You can use any static file server. For example:
+    *   **VS Code:** Use "Live Server" extension.
+    *   **Python:** `python -m http.server 8000`
+    *   **Node:** `npx serve .`
+3.  **Open in Browser:** Navigate to `http://localhost:8000` (or your server's port).
 
-```bash
-# Using Python
-python -m http.server 8000
+## 🛠️ Technology Stack
 
-# Using Node.js
-npx http-server
+*   **Frontend:** HTML5, CSS3 (Variables, Flexbox/Grid), Vanilla JavaScript (ES6+).
+*   **Backend / DB:** Supabase (PostgreSQL).
+*   **Hosting:** Vercel (Recommended).
 
-# Using PHP
-php -S localhost:8000
-```
+## 📝 Usage Tips
 
-Then open `http://localhost:8000` in your browser.
-
-### Option 3: Deploy for Team Sharing
-
-To share with your team, deploy to one of these free hosting platforms:
-
-#### **GitHub Pages** (Recommended)
-1. Create a new GitHub repository
-2. Upload all files (`index.html`, `style.css`, `app.js`)
-3. Go to Settings → Pages → Select main branch
-4. Your app will be live at `https://yourusername.github.io/repo-name`
-
-#### **Netlify**
-1. Drag and drop the folder to [netlify.com/drop](https://app.netlify.com/drop)
-2. Get instant URL to share with your team
-
-#### **Vercel**
-1. Install Vercel CLI: `npm i -g vercel`
-2. Run `vercel` in the project folder
-3. Follow the prompts
-
-## 📖 How to Use
-
-### Managing Team Members
-1. Click **"+ Add Team Member"** in the header
-2. Enter the name and select a color
-3. Click **Save**
-4. To edit: Click on a team member tag
-5. To remove: Click the × on the team member tag
-
-### Adding Daily Updates
-1. Click on any empty cell in the grid (shows "+ Add update")
-2. Enter your updates, one per line
-3. Click **Save**
-4. Updates automatically show timestamp
-
-### Editing Updates
-- Click on any existing update card to edit or delete it
-
-### Managing Goals
-1. Click **"+ Add Goal"** in the Goals section
-2. Enter your weekly goal or target
-3. Click **Save**
-4. Click on any goal card to edit
-5. Click × to remove a goal
-
-### Week Navigation
-- Use the **◀** and **▶** buttons to navigate between weeks
-- The current week number and date range are displayed in the header
-
-## 💾 Data Storage
-
-All data is stored locally in your browser using `localStorage`. This means:
-- ✅ Your data persists between sessions
-- ✅ No internet connection required
-- ✅ No backend or database needed
-- ⚠️ Data is per-browser (not synced across devices)
-- ⚠️ Clearing browser data will delete your standups
-
-### Future Enhancement
-To enable multi-user access and sync across devices, you can add a backend with:
-- Node.js + Express + MongoDB/PostgreSQL
-- Firebase Realtime Database
-- Supabase
-- Any other backend of your choice
+*   **Context Menu:** Right-click on Update Cards or Goals to Copy, Cut, or Paste items.
+*   **Collapsible Sections:** Click the arrow next to "Goals - Targets" to collapse the section and save space.
+*   **Team Management:** To add or Edit team members, click your User Avatar (top right) -> **Manage Team**.
 
 ## 🎨 Customization
 
-### Colors
-Edit the color palette in `style.css`:
-```css
-:root {
-  --color-gustavo: #FFB5C5;
-  --color-david: #B5E7F5;
-  /* Add more colors as needed */
-}
-```
-
-### Team Member Colors
-The app includes 6 pre-defined colors. To add more, edit the `COLORS` array in `app.js`:
-```javascript
-const COLORS = [
-  { name: 'custom', value: '#YOUR_COLOR' },
-  // Add more colors
-];
-```
-
-## 🛠️ Tech Stack
-
-- **HTML5**: Semantic markup
-- **CSS3**: Custom properties, Grid, Flexbox, Animations
-- **Vanilla JavaScript**: No frameworks or dependencies
-- **Google Fonts**: Inter font family
-
-## 📱 Browser Support
-
-Works on all modern browsers:
-- Chrome/Edge (recommended)
-- Firefox
-- Safari
-- Opera
-
-## 📄 License
-
-Free to use and modify for your team!
-
-## 🤝 Contributing
-
-Feel free to customize this app for your team's specific needs!
-
----
-
-**Made with ❤️ for better team collaboration**
+Colors and themes are defined in `css/style.css` under the `:root` variables. You can easily adjust the color palette to match your brand.
