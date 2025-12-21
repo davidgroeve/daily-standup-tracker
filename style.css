@@ -641,13 +641,11 @@ body {
 }
 
 .goals-list {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--spacing-md);
-  overflow-x: auto;
-  overflow-y: hidden;
   padding-bottom: var(--spacing-sm);
-  flex-wrap: nowrap;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .goal-card {
@@ -660,9 +658,6 @@ body {
   min-height: 120px;
   display: flex;
   flex-direction: column;
-  min-width: 250px;
-  max-width: 300px;
-  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -1835,7 +1830,6 @@ body {
 /* Fix goals list to not overflow container */
 .goals-list {
   padding-bottom: var(--spacing-sm);
-  /* Goals list keeps horizontal scroll if needed */
 }
 
 .leaves-header {
