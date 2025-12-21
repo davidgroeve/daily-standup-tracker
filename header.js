@@ -224,8 +224,8 @@
     }
 
     // User Session
-    if (window.supabase) {
-        window.supabase.auth.getSession().then(({ data }) => {
+    if (window.supabaseClient) {
+        window.supabaseClient.auth.getSession().then(({ data }) => {
             if (data?.session?.user) {
                 const user = data.session.user;
                 document.getElementById('header-user-email').textContent = user.email;
