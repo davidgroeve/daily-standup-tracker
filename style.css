@@ -2822,3 +2822,56 @@ select option {
   transform: translateY(30px);
   transition-duration: .3s;
 }
+/* Context Menu */
+.context-menu {
+  position: fixed;
+  z-index: 10000;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  min-width: 160px;
+  padding: 6px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.context-menu-item {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-item span {
+  font-size: 1.1rem;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 6px 0;
+}
+
+.context-menu-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Cut State */
+.update-card.cut-source, .goal-card.cut-source {
+  opacity: 0.4;
+  filter: grayscale(0.5);
+  border-style: dashed !important;
+}
+

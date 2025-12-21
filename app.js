@@ -11,7 +11,13 @@ let state = {
   editingGoal: null,
   editingLeave: null,
   isLoading: false,
-  currentUserEmail: 'Unknown'
+  currentUserEmail: 'Unknown',
+  clipboard: {
+    type: null, // 'update', 'goal'
+    action: null, // 'copy', 'cut'
+    data: null,
+    sourceKey: null // e.g., 'memberId_date' or goalId
+  }
 };
 
 // Collapsible Sections
@@ -1472,6 +1478,7 @@ function closeModal(modalId) {
 
 // Event Listeners
 function attachEventListeners() {
+  initContextMenu();
   // Team Management
   document.getElementById('manageTeamBtn').addEventListener('click', () => showModal('manageTeamModal'));
   document.getElementById('addTeamMemberBtn').addEventListener('click', openTeamMemberModal);
@@ -1735,3 +1742,153 @@ function exportToPDF() {
     document.body.removeChild(container);
   });
 }
+
+// Context Menu Logic
+function initContextMenu() {
+  const menu = document.getElementById('customContextMenu');
+  
+  // Hide menu on click outside
+  document.addEventListener('click', () => {
+    menu.style.display = 'none';
+  });
+
+  // Global Context Menu Handler
+  document.body.addEventListener('contextmenu', (e) => {
+    // Check if right-clicking on an update card or a goal card
+    const updateCard = e.target.closest('.update-card');
+    const goalCard = e.target.closest('.goal-card');
+    const updateSection = e.target.closest('.update-items-grouped') || e.target.closest('.update-content');
+    
+    // We also want to support pasting into empty slots
+    const isEmptySlot = e.target.classList.contains('update-card') && e.target.classList.contains('empty');
+
+    if (updateCard || goalCard || isEmptySlot) {
+      e.preventDefault();
+      
+      const { clientX: x, clientY: y } = e;
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+      menu.style.display = 'block';
+
+      // Store temporary metadata on the menu
+      menu.dataset.targetType = updateCard || isEmptySlot ? 'update' : 'goal';
+      menu.dataset.memberId = updateCard?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || 
+                              isEmptySlot?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+      menu.dataset.date = updateCard?.getAttribute('onclick')?.match(/'[^']+',\s*'([^']+)'/)?.[1] ||
+                          isEmptySlot?.getAttribute('onclick')?.match(/'[^']+',\s*'([^']+)'/)?.[1];
+      menu.dataset.goalId = goalCard?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+
+      // Enable/Disable buttons
+      const canPaste = (state.clipboard.type === 'update' && (updateCard || isEmptySlot)) || 
+                        (state.clipboard.type === 'goal' && goalCard);
+      
+      document.getElementById('ctxPaste').classList.toggle('disabled', !canPaste);
+      document.getElementById('ctxCopy').classList.toggle('disabled', isEmptySlot);
+      document.getElementById('ctxCut').classList.toggle('disabled', isEmptySlot || (goalCard && goalCard.classList.contains('roadmap-goal')));
+    } else {
+      menu.style.display = 'none';
+    }
+  });
+
+  // Menu item actions
+  document.getElementById('ctxCopy').onclick = (e) => {
+    e.stopPropagation();
+    handleClipboardAction('copy');
+  };
+  document.getElementById('ctxCut').onclick = (e) => {
+    e.stopPropagation();
+    handleClipboardAction('cut');
+  };
+  document.getElementById('ctxPaste').onclick = (e) => {
+    e.stopPropagation();
+    handleClipboardAction('paste');
+  };
+}
+
+async function handleClipboardAction(action) {
+  const menu = document.getElementById('customContextMenu');
+  const type = menu.dataset.targetType;
+  const memberId = menu.dataset.memberId;
+  const date = menu.dataset.date;
+  const goalId = menu.dataset.goalId;
+
+  if (action === 'copy' || action === 'cut') {
+    if (type === 'update') {
+      // Find the update items
+      const updateKey = ${memberId}_;
+      const update = state.updates[updateKey];
+      if (!update || !update.items || update.items.length === 0) return;
+      
+      state.clipboard = {
+        type: 'update',
+        action: action,
+        data: JSON.parse(JSON.stringify(update.items)), // Clone
+        sourceKey: updateKey
+      };
+    } else if (type === 'goal') {
+      const goal = state.goals.find(g => g.id === goalId);
+      if (!goal) return;
+      
+      state.clipboard = {
+        type: 'goal',
+        action: action,
+        data: JSON.parse(JSON.stringify(goal)),
+        sourceKey: goalId
+      };
+    }
+
+    // Visual feedback for cut
+    document.querySelectorAll('.cut-source').forEach(el => el.classList.remove('cut-source'));
+    if (action === 'cut') {
+        const sourceSelector = type === 'update' ? [onclick*="'', ''"] : [onclick*="''"];
+        document.querySelectorAll(sourceSelector).forEach(el => el.classList.add('cut-source'));
+    }
+  } else if (action === 'paste') {
+    if (!state.clipboard.data) return;
+
+    if (state.clipboard.type === 'update') {
+      const targetKey = ${memberId}_;
+      let targetUpdate = state.updates[targetKey] || { items: [], content: [] };
+      
+      // Merge items
+      const newItems = JSON.parse(JSON.stringify(state.clipboard.data));
+      targetUpdate.items = [...(targetUpdate.items || []), ...newItems];
+
+      // Save
+      const timestamp = new Date().toISOString();
+      await window.db.saveUpdate(memberId, date, targetUpdate.content, targetUpdate.items, timestamp, state.currentUserEmail);
+      state.updates[targetKey] = { ...targetUpdate, timestamp };
+
+      if (state.clipboard.action === 'cut') {
+        const [srcMemberId, srcDate] = state.clipboard.sourceKey.split('_');
+        const srcUpdate = state.updates[state.clipboard.sourceKey];
+        await window.db.saveUpdate(srcMemberId, srcDate, srcUpdate.content, [], timestamp, state.currentUserEmail);
+        state.updates[state.clipboard.sourceKey] = { ...srcUpdate, items: [], timestamp };
+        state.clipboard = { type: null, action: null, data: null, sourceKey: null };
+      }
+    } else if (state.clipboard.type === 'goal') {
+      // Create new goal based on clipboard data
+      const goalData = state.clipboard.data;
+      const newGoal = await window.db.createGoal({
+        title: action === 'copy' ? ${goalData.title} (Copy) : goalData.title,
+        description: goalData.description,
+        status: goalData.status,
+        owner: goalData.owner,
+        type: goalData.type,
+        week_start: formatDate(state.currentWeekStart, 'iso')
+      });
+      state.goals.push(newGoal);
+
+      if (state.clipboard.action === 'cut' && !goalData.isRoadmap) {
+        await window.db.deleteGoal(state.clipboard.sourceKey);
+        state.goals = state.goals.filter(g => g.id !== state.clipboard.sourceKey);
+        state.clipboard = { type: null, action: null, data: null, sourceKey: null };
+      }
+    }
+
+    renderAll();
+  }
+
+  document.getElementById('customContextMenu').style.display = 'none';
+}
+
