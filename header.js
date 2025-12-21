@@ -194,6 +194,10 @@
                     </div>
                     <button class="btn btn-secondary btn-icon" id="nextWeekBtn" title="Next Week">▶</button>
                 </div>
+                <div class="zoom-control" title="Adjust Column Width">
+                    <label>Zoom</label>
+                    <input type="range" class="zoom-slider" id="gridZoomSlider" min="200" max="600" value="280">
+                </div>
             </div>
             <div class="header-center">
                 <div class="header-clocks-inline">

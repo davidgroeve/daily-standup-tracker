@@ -85,6 +85,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Grid Zoom Persistence & Listener
+  const savedZoom = localStorage.getItem('standupGridZoom') || '280';
+  document.documentElement.style.setProperty('--col-width', savedZoom + 'px');
+
+  const zoomSlider = document.getElementById('gridZoomSlider');
+  if (zoomSlider) zoomSlider.value = savedZoom;
+
+  document.body.addEventListener('input', (e) => {
+    if (e.target.id === 'gridZoomSlider') {
+      const val = e.target.value;
+      document.documentElement.style.setProperty('--col-width', val + 'px');
+      localStorage.setItem('standupGridZoom', val);
+    }
+  });
+
 
   // Change Password Logic
   const changePwdBtn = document.getElementById('changePasswordBtn');
