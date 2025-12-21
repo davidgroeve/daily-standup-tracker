@@ -650,10 +650,7 @@ function renderGrid() {
   }
 }
 
-function renderGoals() {
-  const container = document.getElementById('goalsList');
-  const countBadge = document.getElementById('goalsCount');
-
+function getActiveGoals() {
   // Calculate current week range
   const weekStart = new Date(state.currentWeekStart);
   weekStart.setHours(0, 0, 0, 0);
@@ -668,7 +665,6 @@ function renderGoals() {
     if (!taskStart || !taskEnd) return false;
 
     // Strict containment: Task must start on or after weekStart AND end on or before weekEnd
-    // Range: 2025-12-21 (Sunday) to 2025-12-25 (Thursday)
     const isInRange = taskStart >= weekStart && taskEnd <= weekEnd;
 
     // Leaf task check: Must not be a parent to any other task
@@ -677,8 +673,7 @@ function renderGoals() {
     return isInRange && isLeaf;
   });
 
-  // Also include manual goals if any (optional, but keep for compatibility)
-  const allGoals = [
+  return [
     ...activeRoadmapTasks.map(task => ({
       id: `task_${task.id}`,
       title: task.title,
@@ -692,6 +687,13 @@ function renderGoals() {
     })),
     ...state.goals.map(g => ({ ...g, isRoadmap: false }))
   ];
+}
+
+function renderGoals() {
+  const container = document.getElementById('goalsList');
+  const countBadge = document.getElementById('goalsCount');
+
+  const allGoals = getActiveGoals();
 
   if (countBadge) countBadge.textContent = allGoals.length;
 
@@ -886,9 +888,10 @@ function openDailyView(memberId, date) {
         // Find related goal info
         let goalInfo = '';
         if (item.goal_id) {
-          const goal = state.goals.find(g => g.id === item.goal_id);
+          const allGoals = getActiveGoals();
+          const goal = allGoals.find(g => g.id === item.goal_id);
           if (goal) {
-            goalInfo = `<div style="font-size:0.75rem; color: var(--accent-primary); margin-top:4px;">🎯 ${goal.title}</div>`;
+            goalInfo = `<div style="font-size:0.75rem; color: var(--accent-primary); margin-top:4px;">${goal.isRoadmap ? '🗺️' : '🎯'} ${goal.title}</div>`;
           }
         }
 
@@ -942,8 +945,9 @@ function openUpdateItemModal(index = null) {
   const deleteBtn = document.getElementById('deleteUpdateItemBtn');
 
   // Populate Goal Selector
+  const activeGoals = getActiveGoals();
   goalInput.innerHTML = '<option value="">None</option>' +
-    state.goals.map(g => `<option value="${g.id}">🎯 ${g.title} (${g.status})</option>`).join('');
+    activeGoals.map(g => `<option value="${g.id}">${g.isRoadmap ? '🗺️' : '🎯'} ${g.title} (${g.status})</option>`).join('');
 
   if (index !== null) {
     const item = items[index];
