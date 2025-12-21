@@ -49,7 +49,6 @@
   --transition-fast: 150ms ease-in-out;
   --transition-base: 250ms ease-in-out;
   --transition-slow: 350ms ease-in-out;
-  --col-width: 280px;
 }
 
 /* Light Theme - Original blue/purple accents */
@@ -391,47 +390,6 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-}
-
-/* Zoom Slider */
-.zoom-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 4px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  margin-left: 15px;
-}
-
-.zoom-control label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.zoom-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 80px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--glass-border);
-  outline: none;
-  cursor: pointer;
-}
-
-.zoom-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 6px;
-  background: var(--accent-primary);
-  cursor: pointer;
-  box-shadow: 0 0 5px var(--accent-primary);
 }
 
 /* Buttons */
@@ -833,7 +791,6 @@ body {
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);
   overflow-x: auto;
-  min-height: 400px;
 }
 
 .grid-table {
@@ -841,6 +798,7 @@ body {
   border-collapse: separate;
   border-spacing: var(--spacing-sm);
   table-layout: fixed;
+  /* Force equal column widths */
 }
 
 .grid-table th {
@@ -851,12 +809,6 @@ body {
   text-align: left;
   color: var(--text-primary);
   white-space: nowrap;
-  width: var(--col-width);
-}
-
-.grid-table th:first-child {
-  width: 100px;
-  /* Day column stays fixed */
 }
 
 .grid-table td {
@@ -884,14 +836,15 @@ body {
   border: 2px solid;
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
-  min-height: 120px;
+  min-height: 100px;
+  max-height: 300px;
   cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+  transition: all var(--transition-base);
   position: relative;
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  height: 100%;
+  overflow-y: auto;
 }
 
 .update-card:hover {
