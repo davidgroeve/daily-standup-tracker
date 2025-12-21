@@ -695,6 +695,18 @@ function renderGoals() {
 
   const allGoals = getActiveGoals();
 
+  // Aggregate stats from updates
+  const goalStats = {}; // { goal_id: count }
+  Object.values(state.updates).forEach(update => {
+    if (update.items) {
+      update.items.forEach(item => {
+        if (item.goal_id) {
+          goalStats[item.goal_id] = (goalStats[item.goal_id] || 0) + 1;
+        }
+      });
+    }
+  });
+
   if (countBadge) countBadge.textContent = allGoals.length;
 
   if (allGoals.length === 0) {
@@ -737,8 +749,11 @@ function renderGoals() {
         <span class="goal-type-badge" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
           ${isRoadmap ? '🗺️ Roadmap' : type}
         </span>
-        <div class="goal-status-badge" style="background: ${statusColors[mappedStatus]};">
-            ${isRoadmap ? `${progress}%` : statusLabels[status]}
+        <div style="display: flex; gap: 6px;">
+          ${goalStats[goal.id] ? `<div class="goal-stats-badge" title="${goalStats[goal.id]} updates linked this week">📊 ${goalStats[goal.id]}</div>` : ''}
+          <div class="goal-status-badge" style="background: ${statusColors[mappedStatus]};">
+              ${isRoadmap ? `${progress}%` : statusLabels[status]}
+          </div>
         </div>
       </div>
       <h4 class="goal-title" style="${isRoadmap ? 'color: var(--accent-primary);' : ''}">${title}</h4>
@@ -747,8 +762,8 @@ function renderGoals() {
         `<div class="goal-block-reason" style="background: rgba(245, 101, 101, 0.1); border-left: 2px solid #f56565; padding: 8px; margin: 8px 0; font-size: 0.85rem; color: #f56565;">
            🛑 <b>Blocked:</b> ${blockReason}
          </div>` : ''}
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-        ${owner ? `<p class="goal-owner" style="margin:0;">👤 ${owner}</p>` : '<span></span>'}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+        ${owner ? `<p class="goal-owner" style="margin:0; font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">👤 ${owner}</p>` : '<span></span>'}
         ${isRoadmap ? `
           <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
             <div style="width: ${progress}%; height: 100%; background: var(--accent-primary); border-radius: 3px;"></div>
