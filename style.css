@@ -2875,3 +2875,17 @@ select option {
   border-style: dashed !important;
 }
 
+
+/* Collapsed Goals Logic */
+.goals-section {
+  transition: all var(--transition-base);
+}
+
+.goals-section.collapsed {
+  padding-top: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+}
+
+.goals-section.collapsed .goals-header {
+  margin-bottom: 0;
+}
