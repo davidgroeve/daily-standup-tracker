@@ -60,7 +60,7 @@
 
                         <!-- User Dropdown (Click) -->
                         <div class="user-dropdown">
-                            <a href="#" class="user-dropdown-item">👤 Profile</a>
+                            <a href="#" class="user-dropdown-item" id="header-manage-team">👥 Manage Team</a>
                             <a href="#" class="user-dropdown-item" id="header-change-password">🔑 Reset Password</a>
                             <a href="#" class="user-dropdown-item">ℹ️ More Info</a>
                             <div class="user-dropdown-divider"></div>

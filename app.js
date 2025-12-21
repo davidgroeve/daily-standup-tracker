@@ -1480,7 +1480,8 @@ function closeModal(modalId) {
 function attachEventListeners() {
   initContextMenu();
   // Team Management
-  document.getElementById('manageTeamBtn').addEventListener('click', () => showModal('manageTeamModal'));
+  const manageTeamBtn = document.getElementById('manageTeamBtn') || document.getElementById('header-manage-team');
+  if (manageTeamBtn) manageTeamBtn.addEventListener('click', () => showModal('manageTeamModal'));
   document.getElementById('addTeamMemberBtn').addEventListener('click', openTeamMemberModal);
   document.getElementById('saveTeamMemberBtn').addEventListener('click', saveTeamMember);
 
