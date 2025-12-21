@@ -695,13 +695,21 @@ function renderGoals() {
 
   const allGoals = getActiveGoals();
 
-  // Aggregate stats from updates
-  const goalStats = {}; // { goal_id: count }
+  // Aggregate stats from updates: { goal_id: { member_name: count } }
+  const goalStats = {};
   Object.values(state.updates).forEach(update => {
     if (update.items) {
       update.items.forEach(item => {
         if (item.goal_id) {
-          goalStats[item.goal_id] = (goalStats[item.goal_id] || 0) + 1;
+          if (!goalStats[item.goal_id]) goalStats[item.goal_id] = {};
+
+          // Find member name
+          const memberKey = Object.keys(state.updates).find(k => state.updates[k] === update);
+          const memberId = memberKey ? memberKey.split('_')[0] : null;
+          const member = state.teamMembers.find(m => m.id === memberId);
+          const memberName = member ? member.name : 'Unknown';
+
+          goalStats[item.goal_id][memberName] = (goalStats[item.goal_id][memberName] || 0) + 1;
         }
       });
     }
@@ -750,7 +758,6 @@ function renderGoals() {
           ${isRoadmap ? '🗺️ Roadmap' : type}
         </span>
         <div style="display: flex; gap: 6px;">
-          ${goalStats[goal.id] ? `<div class="goal-stats-badge" title="${goalStats[goal.id]} updates linked this week">📊 ${goalStats[goal.id]}</div>` : ''}
           <div class="goal-status-badge" style="background: ${statusColors[mappedStatus]};">
               ${isRoadmap ? `${progress}%` : statusLabels[status]}
           </div>
@@ -762,11 +769,24 @@ function renderGoals() {
         `<div class="goal-block-reason" style="background: rgba(245, 101, 101, 0.1); border-left: 2px solid #f56565; padding: 8px; margin: 8px 0; font-size: 0.85rem; color: #f56565;">
            🛑 <b>Blocked:</b> ${blockReason}
          </div>` : ''}
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-        ${owner ? `<p class="goal-owner" style="margin:0; font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">👤 ${owner}</p>` : '<span></span>'}
-        ${isRoadmap ? `
-          <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="width: ${progress}%; height: 100%; background: var(--accent-primary); border-radius: 3px;"></div>
+      <div style="margin-top: auto; padding-top: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          ${owner ? `<p class="goal-owner" style="margin:0; font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">👤 ${owner}</p>` : '<span></span>'}
+          ${isRoadmap ? `
+            <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+              <div style="width: ${progress}%; height: 100%; background: var(--accent-primary); border-radius: 3px;"></div>
+            </div>
+          ` : ''}
+        </div>
+        
+        ${goalStats[goal.id] ? `
+          <div class="goal-contributors" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; margin-top: 8px;">
+            ${Object.entries(goalStats[goal.id]).map(([name, count]) => `
+              <div class="contributor-row" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">
+                <span style="text-transform: capitalize;">${name}</span>
+                <span style="font-weight: 700; color: var(--accent-primary);">${count} updates</span>
+              </div>
+            `).join('')}
           </div>
         ` : ''}
       </div>
