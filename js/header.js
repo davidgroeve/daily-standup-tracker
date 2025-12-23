@@ -25,6 +25,7 @@
                             <a href="roadmap.html" class="nav-item" id="nav-roadmap">Roadmap</a>
                             <div class="submenu">
                                 <a href="roadmap.html" class="submenu-item">Timeline</a>
+                                <a href="calendar.html" class="submenu-item">Calendar View</a>
                                 <a href="#" class="submenu-item">Board (Soon)</a>
                                 <a href="#" class="submenu-item">List (Soon)</a>
                             </div>
@@ -51,11 +52,7 @@
                         <div class="user-icon-trigger">
                             <div class="user-avatar" id="header-user-initial">U</div>
                             
-                            <!-- User Info Popover (Hover) -->
-                            <div class="user-info-popover">
-                                <span class="popover-user-email" id="header-user-email">user@example.com</span>
-                                <span class="popover-user-name" id="header-user-display-name">Team Member</span>
-                            </div>
+
                         </div>
 
                         <!-- User Dropdown (Click) -->
@@ -98,10 +95,10 @@
         document.getElementById('nav-standup')?.classList.add('active');
         if (pageNameEl) pageNameEl.textContent = 'Stand-up';
         initStandupRow();
-    } else if (page === 'roadmap.html') {
+    } else if (page === 'roadmap.html' || page === 'calendar.html') {
         document.getElementById('nav-roadmap')?.classList.add('active');
-        if (pageNameEl) pageNameEl.textContent = 'Roadmap';
-        initRoadmapRow();
+        if (pageNameEl) pageNameEl.textContent = page === 'calendar.html' ? 'Roadmap Calendar' : 'Roadmap';
+        if (page === 'roadmap.html') initRoadmapRow();
     } else if (page === 'analytics.html') {
         document.getElementById('nav-analytics')?.classList.add('active');
         if (pageNameEl) pageNameEl.textContent = 'Analytics';
@@ -228,8 +225,7 @@
         window.supabaseClient.auth.getSession().then(({ data }) => {
             if (data?.session?.user) {
                 const user = data.session.user;
-                document.getElementById('header-user-email').textContent = user.email;
-                document.getElementById('header-user-display-name').textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+
                 document.getElementById('header-user-initial').textContent = (user.user_metadata?.full_name || user.email)[0].toUpperCase();
             }
         });

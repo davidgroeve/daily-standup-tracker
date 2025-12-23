@@ -8,6 +8,12 @@ let roadmapTasks = [];
 let editingTaskId = null;
 let collapsedGroups = new Set(); // Track collapsed task IDs
 
+// Static data for roadmap markers (reverted from dynamic)
+const roadmapMarkers = [
+    { label: '1st Review to Go2Market', date: '2025-12-22', color_type: 'default' },
+    { label: 'Go2Market', date: '2026-01-15', color_type: 'success' }
+];
+
 async function initRoadmap() {
     if (!window.db) {
         setTimeout(initRoadmap, 100);
@@ -18,8 +24,12 @@ async function initRoadmap() {
     const savedCollapsed = localStorage.getItem('roadmap_collapsed');
     if (savedCollapsed) collapsedGroups = new Set(JSON.parse(savedCollapsed));
 
+    // Load and apply saved column widths
+    applySavedColumnWidths();
+
     await loadRoadmap();
     setupEventListeners();
+    initTableResizers();
 }
 
 async function loadRoadmap() {
@@ -301,31 +311,20 @@ function renderGantt() {
         ganttGrid.appendChild(todayMarker);
     }
 
-    // Render Event Marker (Dec 22nd) - Monday
-    const eventDate = new Date('2025-12-22T00:00:00');
-    const eventDiff = Math.round((eventDate - minDate) / (1000 * 60 * 60 * 24));
-    console.log('[DEBUG] Event Offset (Dec 22):', eventDiff);
-    if (eventDiff >= 0 && eventDiff < totalDays) {
-        const eventMarker = document.createElement('div');
-        eventMarker.className = 'event-marker';
-        eventMarker.style.left = `${eventDiff * dayWidth}px`;
-        eventMarker.style.width = `${dayWidth}px`;
-        eventMarker.innerHTML = '<div class="event-label">1st Review to Go2Market</div>';
-        ganttGrid.appendChild(eventMarker);
-    }
+    // Render Static Markers
+    roadmapMarkers.forEach(marker => {
+        const mDate = new Date(marker.date);
+        const mDiff = Math.round((mDate - minDate) / (1000 * 60 * 60 * 24));
 
-    // Render 2nd Event Marker (Jan 15th) - Go2Market (Green)
-    const eventDate2 = new Date('2026-01-15T00:00:00');
-    const eventDiff2 = Math.round((eventDate2 - minDate) / (1000 * 60 * 60 * 24));
-    console.log('[DEBUG] Event Offset (Jan 15):', eventDiff2);
-    if (eventDiff2 >= 0 && eventDiff2 < totalDays) {
-        const eventMarker2 = document.createElement('div');
-        eventMarker2.className = 'event-marker success';
-        eventMarker2.style.left = `${eventDiff2 * dayWidth}px`;
-        eventMarker2.style.width = `${dayWidth}px`;
-        eventMarker2.innerHTML = '<div class="event-label">Go2Market</div>';
-        ganttGrid.appendChild(eventMarker2);
-    }
+        if (mDiff >= 0 && mDiff < totalDays) {
+            const markerEl = document.createElement('div');
+            markerEl.className = `event-marker ${marker.color_type === 'success' ? 'success' : ''}`;
+            markerEl.style.left = `${mDiff * dayWidth}px`;
+            markerEl.style.width = `${dayWidth}px`;
+            markerEl.innerHTML = `<div class="event-label">${marker.label}</div>`;
+            ganttGrid.appendChild(markerEl);
+        }
+    });
 
     // Render Bars (Recursive ordering)
     const sortedTasks = [];
@@ -616,4 +615,60 @@ function setupEventListeners() {
     document.getElementById('roadmapModal').onclick = (e) => {
         if (e.target.id === 'roadmapModal') closeModal();
     };
+}
+
+function initTableResizers() {
+    const resizers = document.querySelectorAll('.resizer');
+
+    resizers.forEach(resizer => {
+        const header = resizer.parentElement;
+        let startX, startWidth;
+
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startX = e.clientX;
+            startWidth = header.offsetWidth;
+
+            resizer.classList.add('resizing');
+
+            const onMouseMove = (moveEvent) => {
+                const width = startWidth + (moveEvent.clientX - startX);
+                if (width > 50) { // Minimum width
+                    header.style.width = `${width}px`;
+                    saveColumnWidths();
+                }
+            };
+
+            const onMouseUp = () => {
+                resizer.classList.remove('resizing');
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        });
+    });
+}
+
+function saveColumnWidths() {
+    const widths = {};
+    const headers = document.querySelectorAll('.milestones-table th');
+    headers.forEach((th, index) => {
+        widths[index] = th.style.width;
+    });
+    localStorage.setItem('roadmap_column_widths', JSON.stringify(widths));
+}
+
+function applySavedColumnWidths() {
+    const savedWidths = localStorage.getItem('roadmap_column_widths');
+    if (savedWidths) {
+        const widths = JSON.parse(savedWidths);
+        const headers = document.querySelectorAll('.milestones-table th');
+        headers.forEach((th, index) => {
+            if (widths[index]) {
+                th.style.width = widths[index];
+            }
+        });
+    }
 }

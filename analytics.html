@@ -327,6 +327,10 @@
         // --- Data Logic ---
 
         async function initDashboard() {
+            // Check session
+            const session = await window.auth.protectRoute();
+            if (!session) return; // Will redirect
+
             try {
                 // Fetch Data
                 const teamMembers = await window.db.getTeamMembers();

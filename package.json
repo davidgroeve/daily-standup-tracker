@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "A beautiful, modern web application for tracking daily standup meetings with your team",
   "scripts": {
-    "dev": "npx http-server -o -c-1",
-    "start": "npx http-server -o -c-1"
+    "dev": "npx http-server . -o -c-1",
+    "start": "npx http-server . -o -c-1"
   },
-  "keywords": ["standup", "tracker", "team"],
+  "keywords": [
+    "standup",
+    "tracker",
+    "team"
+  ],
   "license": "MIT"
 }
