@@ -287,9 +287,12 @@ function renderGantt() {
     for (let i = 0; i < totalDays; i++) {
         const date = new Date(minDate);
         date.setDate(date.getDate() + i);
+        const dayIdx = date.getDay();
+        const isWeekend = (dayIdx === 5 || dayIdx === 6); // Fri, Sat
 
         const dayEl = document.createElement('div');
         dayEl.className = 'timeline-day';
+        if (isWeekend) dayEl.classList.add('weekend');
         if (date.getTime() === today.getTime()) dayEl.classList.add('today');
 
         if (i === 0 || date.getDate() === 1 || (i % 5 === 0)) {

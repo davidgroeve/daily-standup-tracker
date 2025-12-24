@@ -2858,3 +2858,13 @@ select option {
 .goals-section.collapsed .goals-header {
   margin-bottom: 0;
 }
+
+/* Gantt Chart Weekend Highlighting */
+.timeline-day.weekend {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .timeline-day.weekend {
+  background: rgba(0, 0, 0, 0.05);
+}
