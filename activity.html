@@ -4,6 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <title>Activity Log - Daily Standup Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
@@ -22,6 +28,110 @@
             max-height: none;
             overflow-y: visible;
         }
+
+        .filter-controls {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+        }
+
+        /* Ensure dropdown options are themed */
+        .filter-group select option {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .activity-group-header {
+            margin: 2rem 0 1rem 0;
+            padding: 0.75rem 1rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .activity-group-header:hover {
+            background: var(--glass-border);
+            border-color: var(--accent-primary);
+        }
+
+        .activity-group-header .toggle-icon {
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .activity-group-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .activity-group-header:first-child {
+            margin-top: 0;
+        }
+
+        .activity-group-content {
+            display: block;
+            max-height: 2000px;
+            /* Large enough for most groups */
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s;
+            opacity: 1;
+        }
+
+        .activity-group-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -32,7 +142,42 @@
         <section class="change-logs-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <h2>Recent Activity</h2>
-                <button class="btn btn-primary" id="refreshLogsBtn">🔄 Refresh</button>
+                <div class="activity-actions">
+                    <button class="btn btn-primary" id="refreshLogsBtn">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="userFilter">User</label>
+                    <select id="userFilter">
+                        <option value="all">All Users</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="actionFilter">Action</label>
+                    <select id="actionFilter">
+                        <option value="all">All Actions</option>
+                        <option value="create">Create</option>
+                        <option value="update">Update</option>
+                        <option value="delete">Delete</option>
+                        <option value="auth">Auth (Login/Logout)</option>
+                        <option value="export">Export</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="dateFilter">Date</label>
+                    <input type="date" id="dateFilter">
+                </div>
+                <div class="filter-group">
+                    <label for="groupBy">Group By</label>
+                    <select id="groupBy">
+                        <option value="none">None</option>
+                        <option value="user">User</option>
+                        <option value="action">Action Type</option>
+                        <option value="date">Date</option>
+                    </select>
+                </div>
             </div>
 
             <div id="changeLogsList" class="change-logs-list">

@@ -2238,20 +2238,11 @@ select option {
   font-weight: bold;
 }
 
-.action-create {
-  background: rgba(72, 187, 120, 0.2);
-  color: #48bb78;
-}
-
-.action-update {
-  background: rgba(66, 153, 225, 0.2);
-  color: #4299e1;
-}
-
-.action-delete {
-  background: rgba(245, 101, 101, 0.2);
-  color: #f56565;
-}
+.change-action-badge.action-create { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+.change-action-badge.action-update { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+.change-action-badge.action-delete { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.change-action-badge.action-auth { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+.change-action-badge.action-export { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
 
 
 /* Holiday Calendar Grid */

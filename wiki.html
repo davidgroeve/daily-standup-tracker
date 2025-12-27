@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            const theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <title>User Manual - Daily Standup Tracker</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .wiki-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 4rem;
+        }
+
+        .wiki-sidebar {
+            position: sticky;
+            top: 4rem;
+            height: fit-content;
+        }
+
+        .wiki-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .wiki-nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .wiki-nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .wiki-nav-item.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .wiki-content {
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .wiki-content section {
+            margin-bottom: 6rem;
+            scroll-margin-top: 4rem;
+        }
+
+        .wiki-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .wiki-content h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wiki-content h3 {
+            font-size: 1.25rem;
+            margin: 2rem 0 1rem 0;
+            color: var(--text-primary);
+        }
+
+        .wiki-content p {
+            margin-bottom: 1.2rem;
+        }
+
+        .wiki-content ul {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .wiki-content li {
+            margin-bottom: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: var(--card-border);
+            padding: 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-card h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 900px) {
+            .wiki-container {
+                grid-template-columns: 1fr;
+            }
+
+            .wiki-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header-container"></div>
+
+    <div class="wiki-container">
+        <aside class="wiki-sidebar">
+            <nav class="wiki-nav">
+                <a href="#welcome" class="wiki-nav-item active">👋 Welcome</a>
+                <a href="#standup" class="wiki-nav-item">📊 Stand-up Grid</a>
+                <a href="#goals" class="wiki-nav-item">🎯 Goal Tracking</a>
+                <a href="#roadmap" class="wiki-nav-item">🗺️ Roadmap & Tasks</a>
+                <a href="#analytics" class="wiki-nav-item">📈 Analytics Insights</a>
+                <a href="#activity" class="wiki-nav-item">⚡ Activity Auditing</a>
+            </nav>
+        </aside>
+
+        <main class="wiki-content">
+            <section id="welcome">
+                <h1>User Manual</h1>
+                <p>Welcome to the <strong>Rommaana Daily Standup Tracker</strong>. This platform is designed to
+                    streamline team communication, track long-term goals, and provide actionable insights into team
+                    velocity and project health.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Real-time Sync</h4>
+                        <p>All updates and changes are synchronized instantly across the entire team.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Data-Driven</h4>
+                        <p>Automatic metric calculation helps you understand team performance at a glance.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Secure</h4>
+                        <p>Your data is protected by enterprise-grade security and row-level access controls.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="standup">
+                <h2>📊 Stand-up Grid</h2>
+                <p>The Stand-up Grid is the heartbeat of your daily coordination. It shows what everyone is working on
+                    for the current week.</p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Daily Updates</strong>: Click on any cell in the grid to add or edit your status for
+                        that day.</li>
+                    <li><strong>Week Navigation</strong>: Use the arrows in the header to jump between weeks or use the
+                        date picker to find a specific date.</li>
+                    <li><strong>Status Colors</strong>: Team members are color-coded to make the grid easy to scan.</li>
+                    <li><strong>Export</strong>: Use the "Export" button to download the current week's data as CSV,
+                        Excel, PDF, or a high-quality Image.</li>
+                </ul>
+            </section>
+
+            <section id="goals">
+                <h2>🎯 Goal Tracking</h2>
+                <p>Located at the top of the Stand-up page, the Goals section tracks high-level targets that span
+                    multiple weeks.</p>
+
+                <h3>Managing Goals</h3>
+                <ul>
+                    <li><strong>Creating</strong>: Click "Add Goal" to specify a target, owner, and deadline.</li>
+                    <li><strong>Status badges</strong>: Goals can be marked as "Pending", "In Progress", or "Done".</li>
+                    <li><strong>Visibility</strong>: Use the collapse icon to hide the goals section when you want to
+                        focus purely on the grid.</li>
+                </ul>
+            </section>
+
+            <section id="roadmap">
+                <h2>🗺️ Roadmap & Timeline</h2>
+                <p>The Roadmap provides a macro-view of your project milestones and sub-tasks across a long-term
+                    timeline.</p>
+
+                <h3>Timeline Features</h3>
+                <ul>
+                    <li><strong>Milestones</strong>: Large blocks representing major project phases. Drag ends to resize
+                        duration.</li>
+                    <li><strong>Sub-tasks</strong>: Granular items that can be nested under milestones.</li>
+                    <li><strong>Calendar View</strong>: Toggle to the Calendar view for a month-by-month breakdown of
+                        activities.</li>
+                    <li><strong>Visibility Filters</strong>: Use the "Select Items" filter in the header to declutter
+                        the roadmap and focus on specific projects.</li>
+                </ul>
+            </section>
+
+            <section id="analytics">
+                <h2>📈 Analytics Insights</h2>
+                <p>The Analytics dashboard transforms your stand-up data into powerful visualizations.</p>
+
+                <h3>Core Metrics</h3>
+                <ul>
+                    <li><strong>Target Mastery</strong>: Measures how many long-term goals are being successfully
+                        completed within their deadlines.</li>
+                    <li><strong>Update Compliance</strong>: Tracks how consistently the team is providing their daily
+                        updates in the stand-up grid.</li>
+                    <li><strong>Availability</strong>: Shows the current team presence based on planned leaves and
+                        holidays.</li>
+                    <li><strong>Blocker Feed</strong>: A real-time stream of items tagged as blockers in the stand-up
+                        updates.</li>
+                </ul>
+            </section>
+
+            <section id="activity">
+                <h2>⚡ Activity Auditing</h2>
+                <p>The Activity Log provides a transparent record of all changes made within the platform.</p>
+
+                <h3>Using the Activity Log</h3>
+                <ul>
+                    <li><strong>Audit Trail</strong>: See who created, updated, or deleted any item, including goals,
+                        tasks, and stand-up entries.</li>
+                    <li><strong>Auth Tracking</strong>: Monitor user session activity (logins/logouts).</li>
+                    <li><strong>Filtering</strong>: Use the controls at the top to filter by User, Action Type, or
+                        specific Dates.</li>
+                    <li><strong>Grouping</strong>: Reorganize the list by grouping events by User, Action, or Date for
+                        easier auditing.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Highlight active side-link on scroll
+            const sections = document.querySelectorAll('section');
+            const navItems = document.querySelectorAll('.wiki-nav-item');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    if (pageYOffset >= sectionTop - 150) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navItems.forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('href').slice(1) === current) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

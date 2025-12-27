@@ -1577,7 +1577,7 @@ function downloadFile(content, filename, type) {
   URL.revokeObjectURL(url);
 }
 
-function exportToCSV() {
+async function exportToCSV() {
   const weekStart = state.currentWeekStart;
   const weekNum = getWeekNumber(weekStart);
 
@@ -1609,9 +1609,10 @@ function exportToCSV() {
 
   downloadFile(csv, `standup-week${weekNum}.csv`, 'text/csv');
   closeModal('exportModal');
+  await window.db.logChange(state.currentUserEmail, 'export', 'grid', 'csv', 'Exported data to CSV');
 }
 
-function exportToXLSX() {
+async function exportToXLSX() {
   if (typeof XLSX === 'undefined') {
     alert('Excel export library not loaded. Please refresh the page.');
     return;
@@ -1663,9 +1664,10 @@ function exportToXLSX() {
   XLSX.writeFile(wb, `standup-week${weekNum}.xlsx`);
 
   closeModal('exportModal');
+  await window.db.logChange(state.currentUserEmail, 'export', 'grid', 'xlsx', 'Exported data to XLSX');
 }
 
-function exportToPNG() {
+async function exportToPNG() {
   if (typeof html2canvas === 'undefined') {
     alert('Screenshot library not loaded. Please refresh the page.');
     return;
@@ -1699,9 +1701,10 @@ function exportToPNG() {
       document.body.removeChild(container);
     });
   });
+  await window.db.logChange(state.currentUserEmail, 'export', 'grid', 'image', 'Exported dashboard to PNG');
 }
 
-function exportToPDF() {
+async function exportToPDF() {
   if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
     alert('PDF export libraries not loaded. Please refresh the page.');
     return;
@@ -1742,6 +1745,7 @@ function exportToPDF() {
 
     document.body.removeChild(container);
   });
+  await window.db.logChange(state.currentUserEmail, 'export', 'grid', 'pdf', 'Exported dashboard to PDF');
 }
 
 // Context Menu Logic

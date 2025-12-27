@@ -14,6 +14,10 @@ const roadmapMarkers = [
     { label: 'Go2Market', date: '2026-01-15', color_type: 'success' }
 ];
 
+// Filtering State
+let visibleTaskIds = new Set();
+let hideCompleted = false;
+
 async function initRoadmap() {
     if (!window.db) {
         setTimeout(initRoadmap, 100);
@@ -38,6 +42,13 @@ async function loadRoadmap() {
 
     try {
         roadmapTasks = await window.db.getRoadmapTasks();
+
+        // Initialize visible set to all on first load
+        if (visibleTaskIds.size === 0) {
+            roadmapTasks.forEach(t => visibleTaskIds.add(t.id));
+        }
+
+        initFilter(); // Initialize filter UI
         renderRoadmap();
     } catch (error) {
         console.error('Error loading roadmap:', error);
@@ -73,38 +84,77 @@ function collapseAll() {
     renderRoadmap();
 }
 
+// ---------------------------
+// RENDERING
+// ---------------------------
+function getExpandedVisibleIds() {
+    const expanded = new Set(visibleTaskIds);
+
+    // For each visible task, add all its ancestors
+    visibleTaskIds.forEach(id => {
+        let current = roadmapTasks.find(t => t.id === id);
+        while (current && current.parent_id) {
+            expanded.add(current.parent_id);
+            current = roadmapTasks.find(t => t.id === current.parent_id);
+        }
+    });
+
+    // Also include those that match "hideCompleted" logic if parents
+    // Actually, if we hide completed, we should probably hide them even if they are parents?
+    // Usually, if a subtask is active, the parent "should" be visible to show context.
+    // Let's stick to expanded set for structural presence.
+    return expanded;
+}
+
 function renderRoadmap() {
     const tableBody = document.getElementById('roadmapTableBody');
+    if (!tableBody) return;
+
     tableBody.innerHTML = '';
 
-    if (roadmapTasks.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No milestones found. Add your first one!</td></tr>';
-        return;
-    }
+    const expandedVisibleIds = getExpandedVisibleIds();
 
     // Get top level tasks
-    const topLevel = roadmapTasks.filter(t => !t.parent_id);
+    // Filter by expanded visibility for structure
+    const visibleTasks = roadmapTasks.filter(t => {
+        if (!expandedVisibleIds.has(t.id)) return false;
+        if (hideCompleted && t.progress === 100 && !visibleTaskIds.has(t.id)) {
+            // If it's a parent kept only for structure but it's done, maybe hide?
+            // Actually, keep it if it has visible children.
+        }
+        return true;
+    });
+
+    const topLevel = visibleTasks.filter(t => !t.parent_id);
     topLevel.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.start_date) - new Date(b.start_date));
 
     topLevel.forEach(task => {
-        renderBranch(task, 0);
+        renderBranch(task, 0, expandedVisibleIds);
     });
 
-    renderGantt();
+    initTableResizers();
+    renderGantt(expandedVisibleIds);
 }
 
-function renderBranch(task, level) {
+function renderBranch(task, level, expandedVisibleIds) {
     const children = roadmapTasks.filter(c => c.parent_id === task.id);
-    children.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.start_date) - new Date(b.start_date));
+    // Filter visible children based on expanded set
+    const visibleChildren = children.filter(c => expandedVisibleIds.has(c.id));
+
+    visibleChildren.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.start_date) - new Date(b.start_date));
+
+    // Determine if we should dim or mark this row if it's NOT explicitly selected
+    // but kept for structure.
+    const isExplicitlySelected = visibleTaskIds.has(task.id);
 
     const hasSubs = children.length > 0;
     const isCollapsed = collapsedGroups.has(task.id);
 
-    renderTaskRow(task, level, hasSubs, isCollapsed);
+    renderTaskRow(task, level, hasSubs, isCollapsed, isExplicitlySelected);
 
     if (hasSubs && !isCollapsed) {
-        children.forEach(child => {
-            renderBranch(child, level + 1);
+        visibleChildren.forEach(child => {
+            renderBranch(child, level + 1, expandedVisibleIds);
         });
     }
 }
@@ -116,16 +166,21 @@ function getTaskProgress(task) {
     return Math.round(total / children.length);
 }
 
-function renderTaskRow(task, level, hasSubs = false, isCollapsed = false) {
+function renderTaskRow(task, level, hasSubs = false, isCollapsed = false, isExplicitlySelected = true) {
     const tableBody = document.getElementById('roadmapTableBody');
-    const start = new Date(task.start_date);
-    const end = new Date(task.end_date);
-    const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const start = task.start_date ? new Date(task.start_date).toLocaleDateString() : '-';
+    const end = task.end_date ? new Date(task.end_date).toLocaleDateString() : '-';
     const calculatedProgress = getTaskProgress(task);
 
     const row = document.createElement('tr');
-    row.className = `task-row level-${level}`;
-    if (level === 0) row.classList.add('parent-group');
+    row.className = `task-row level-${level} ${hasSubs ? 'parent-group' : ''} ${!isExplicitlySelected ? 'structural-parent' : ''}`;
+    row.dataset.id = task.id;
+
+    // Add opacity or styling if it's just a structural parent
+    if (!isExplicitlySelected) {
+        row.style.opacity = '0.7';
+        row.style.fontStyle = 'italic';
+    }
     row.style.cursor = 'pointer';
     row.setAttribute('draggable', 'true');
     row.dataset.id = task.id;
@@ -228,17 +283,19 @@ function renderTaskRow(task, level, hasSubs = false, isCollapsed = false) {
                 <div class="progress-bar-fill" style="width: ${calculatedProgress}%"></div>
             </div>
         </td>
-        <td style="color: #888">${task.start_date}</td>
-        <td style="color: #888">${task.end_date}</td>
+        <td style="color: #888">${start}</td>
+        <td style="color: #888">${end}</td>
         <td style="text-align: center;">${task.assigned_to || '-'}</td>
         <td style="font-weight: 700;">${calculatedProgress}%</td>
-        <td style="color: #888">${diffDays}</td>
+        <td style="color: #888">${task.duration_days || '-'}</td>
     `;
     tableBody.appendChild(row);
 }
 
-function renderGantt() {
+function renderGantt(expandedVisibleIds) {
     const ganttGrid = document.getElementById('ganttGrid');
+    if (!ganttGrid) return;
+
     ganttGrid.innerHTML = '';
 
     if (roadmapTasks.length === 0) return;
@@ -330,14 +387,17 @@ function renderGantt() {
     });
 
     // Render Bars (Recursive ordering)
-    const sortedTasks = [];
-    const topLevelList = roadmapTasks.filter(t => !t.parent_id);
+    const effectiveVisibleIds = expandedVisibleIds || getExpandedVisibleIds();
+
+    const topLevelList = roadmapTasks.filter(t => !t.parent_id && effectiveVisibleIds.has(t.id));
     topLevelList.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.start_date) - new Date(b.start_date));
 
+    const sortedTasks = [];
     function collectTasks(task) {
+        if (!effectiveVisibleIds.has(task.id)) return;
         sortedTasks.push(task);
         if (!collapsedGroups.has(task.id)) {
-            const children = roadmapTasks.filter(c => c.parent_id === task.id);
+            const children = roadmapTasks.filter(c => c.parent_id === task.id && effectiveVisibleIds.has(c.id));
             children.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.start_date) - new Date(b.start_date));
             children.forEach(collectTasks);
         }
@@ -345,7 +405,9 @@ function renderGantt() {
 
     topLevelList.forEach(collectTasks);
 
-    sortedTasks.forEach((task, index) => {
+    const visibleTasksList = sortedTasks;
+
+    visibleTasksList.forEach((task, index) => {
         const start = new Date(task.start_date);
         const end = new Date(task.end_date);
 
@@ -618,6 +680,147 @@ function setupEventListeners() {
     document.getElementById('roadmapModal').onclick = (e) => {
         if (e.target.id === 'roadmapModal') closeModal();
     };
+
+    // Filter Dropdown Toggle (Event Delegation)
+    if (!window.roadmapFilterInitialized) {
+        window.roadmapFilterInitialized = true;
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('roadmapFilterDropdown');
+            if (!dropdown) return;
+
+            const btn = e.target.closest('#roadmapFilterBtn');
+            const insideDropdown = e.target.closest('#roadmapFilterDropdown');
+            const isDoneBtn = e.target.closest('#filterDoneBtn');
+
+            // Bug fix: If the element clicked was removed from the DOM (during re-render), 
+            // document.contains(e.target) will be false. In this case, we assume it was 
+            // internal and don't close.
+            const isDisconnected = e.target && !document.contains(e.target);
+
+            if (btn) {
+                // Toggle on button click
+                e.preventDefault();
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+            } else if (isDoneBtn) {
+                dropdown.classList.remove('active');
+            } else if (!insideDropdown && !isDisconnected) {
+                // Close if clicking outside both button and dropdown
+                dropdown.classList.remove('active');
+            }
+        });
+    }
+}
+
+// ---------------------------
+// FILTER LOGIC
+// ---------------------------
+function initFilter() {
+    const list = document.getElementById('roadmapFilterList');
+    const searchInput = document.getElementById('roadmapTaskSearch');
+    const btnAll = document.getElementById('filterSelectAll');
+    const btnNone = document.getElementById('filterSelectNone');
+    const btnHideDone = document.getElementById('filterHideDone');
+    const btnDone = document.getElementById('filterDoneBtn');
+
+    if (!list) return;
+
+    function renderList() {
+        const term = (searchInput.value || '').toLowerCase();
+        list.innerHTML = '';
+
+        roadmapTasks.forEach(task => {
+            if (term && !task.title.toLowerCase().includes(term)) return;
+
+            const isVisible = visibleTaskIds.has(task.id);
+            const isDone = task.progress === 100;
+
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.onclick = () => toggleTaskVisibility(task.id);
+
+            // Indent based on hierarchy roughly? No, flatten search list usually better or simple tree.
+            // Let's do flat for filter list like calendar
+
+            item.innerHTML = `
+                <input type="checkbox" ${isVisible ? 'checked' : ''} style="pointer-events: none;">
+                <span class="item-label" title="${task.title}">${task.title}</span>
+                ${isDone ? '<span style="font-size:0.7rem;">✓</span>' : ''}
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    searchInput.oninput = renderList;
+
+    btnAll.onclick = () => {
+        roadmapTasks.forEach(t => visibleTaskIds.add(t.id));
+        renderList();
+        renderRoadmap();
+    };
+
+    btnNone.onclick = () => {
+        visibleTaskIds.clear();
+        renderList();
+        renderRoadmap();
+    };
+
+    btnHideDone.onclick = (e) => {
+        e.stopPropagation();
+        hideCompleted = !hideCompleted;
+        btnHideDone.style.background = hideCompleted ? 'var(--accent-primary)' : '';
+        btnHideDone.style.color = hideCompleted ? 'white' : '';
+        renderRoadmap();
+    };
+
+    if (btnDone) {
+        btnDone.onclick = () => {
+            document.getElementById('roadmapFilterDropdown')?.classList.remove('active');
+        };
+    }
+
+    renderList();
+}
+
+function toggleTaskVisibility(id) {
+    if (visibleTaskIds.has(id)) {
+        visibleTaskIds.delete(id);
+    } else {
+        visibleTaskIds.add(id);
+    }
+    // Re-render list to update checkbox
+    const list = document.getElementById('roadmapFilterList');
+    // Optimization: just update the specific checkbox if we wanted, but full render is safe for now
+    // Actually finding the specific input is better UX to avoid scroll jump
+    // Let's just re-render roadmap and manually update checkbox
+
+    // Refresh filter UI
+    const searchInput = document.getElementById('roadmapTaskSearch');
+    const term = (searchInput.value || '').toLowerCase();
+
+    // We'll re-run renderList to be safe or just find the element. 
+    // Re-rendering list is easiest to keep state sync.
+    // To preserve scroll, we could save scrollTop.
+    const scroll = list.scrollTop;
+    // renderList logic again:
+    list.innerHTML = '';
+    roadmapTasks.forEach(task => {
+        if (term && !task.title.toLowerCase().includes(term)) return;
+        const isVisible = visibleTaskIds.has(task.id);
+        const isDone = task.progress === 100;
+        const item = document.createElement('div');
+        item.className = 'task-item';
+        item.onclick = () => toggleTaskVisibility(task.id);
+        item.innerHTML = `
+            <input type="checkbox" ${isVisible ? 'checked' : ''} style="pointer-events: none;">
+            <span class="item-label" title="${task.title}">${task.title}</span>
+            ${isDone ? '<span style="font-size:0.7rem;">✓</span>' : ''}
+        `;
+        list.appendChild(item);
+    });
+    list.scrollTop = scroll;
+
+    renderRoadmap();
 }
 
 function initTableResizers() {

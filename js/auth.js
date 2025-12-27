@@ -6,6 +6,9 @@ const auth = {
             email,
             password
         });
+        if (!error && data.user) {
+            await window.db.logChange(data.user.email, 'auth', data.user.id, 'login', 'User logged in');
+        }
         return { data, error };
     },
 
@@ -13,6 +16,10 @@ const auth = {
     async signOut() {
         const { error } = await window.supabaseClient.auth.signOut();
         if (!error) {
+            const user = await this.getUser();
+            if (user) {
+                await window.db.logChange(user.email, 'auth', user.id, 'logout', 'User logged out');
+            }
             window.location.href = 'login.html';
         }
         return { error };

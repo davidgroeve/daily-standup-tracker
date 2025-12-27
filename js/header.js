@@ -59,6 +59,7 @@
                         <div class="user-dropdown">
                             <a href="#" class="user-dropdown-item" id="header-manage-team">👥 Manage Team</a>
                             <a href="#" class="user-dropdown-item" id="header-change-password">🔑 Reset Password</a>
+                            <a href="wiki.html" target="_blank" class="user-dropdown-item" id="header-wiki-link">📖 User Manual (Wiki)</a>
                             <a href="#" class="user-dropdown-item">ℹ️ More Info</a>
                             <div class="user-dropdown-divider"></div>
                             <a href="#" class="user-dropdown-item danger" id="header-logout">🚪 Logout</a>
@@ -111,6 +112,7 @@
     const themeBtn = document.getElementById('header-theme-toggle');
     if (themeBtn) {
         const updateThemeUI = (theme) => {
+            document.documentElement.setAttribute('data-theme', theme);
             themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
             const logoEl = document.getElementById('header-logo');
             if (logoEl) {
@@ -123,7 +125,6 @@
         themeBtn.onclick = () => {
             const current = document.documentElement.getAttribute('data-theme') || 'dark';
             const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
             updateThemeUI(next);
         };
@@ -138,6 +139,21 @@
             userMenu.classList.toggle('active');
         };
         document.addEventListener('click', () => userMenu.classList.remove('active'));
+    }
+
+    // Wiki Context Link
+    const wikiLink = document.getElementById('header-wiki-link');
+    if (wikiLink) {
+        const getWikiContext = () => {
+            const path = window.location.pathname;
+            const page = path.split('/').pop() || 'index.html';
+            if (page === 'index.html' || page === '') return '#standup';
+            if (page === 'roadmap.html' || page === 'calendar.html') return '#roadmap';
+            if (page === 'analytics.html') return '#analytics';
+            if (page === 'activity.html') return '#activity';
+            return '#welcome';
+        };
+        wikiLink.href = 'wiki.html' + getWikiContext();
     }
 
     // Logout
@@ -210,7 +226,33 @@
         if (!bottomRow) return;
         bottomRow.style.display = 'flex';
         bottomRow.innerHTML = `
-            <div class="header-left"></div>
+            <div class="header-left" style="display: flex; align-items: center; padding-left: 20px;">
+                 <div class="roadmap-filter-container" style="position: relative;">
+                    <button class="btn btn-secondary" id="roadmapFilterBtn" style="gap: 6px;">
+                        <span>🚩</span> Select Items
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div class="roadmap-filter-dropdown" id="roadmapFilterDropdown">
+                        <div class="picker-header">
+                            <h3>Filter Tasks</h3>
+                            <div class="search-box">
+                                <input type="text" id="roadmapTaskSearch" placeholder="Search tasks...">
+                            </div>
+                            <div class="picker-actions">
+                                <button class="btn btn-secondary btn-tiny" id="filterSelectAll">All</button>
+                                <button class="btn btn-secondary btn-tiny" id="filterSelectNone">None</button>
+                                <button class="btn btn-secondary btn-tiny" id="filterHideDone">Hide Done</button>
+                            </div>
+                        </div>
+                        <div class="task-list" id="roadmapFilterList">
+                            <div style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8rem;">Loading...</div>
+                        </div>
+                        <div class="picker-footer" style="padding: 10px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.1);">
+                            <button class="btn btn-primary" id="filterDoneBtn" style="padding: 4px 16px; font-size: 0.75rem; height: auto; width: auto;">Done</button>
+                        </div>
+                    </div>
+                 </div>
+            </div>
             <div class="header-center">
                 <button class="btn btn-primary" id="addTaskBtn">
                     <span>➕</span> Create New Milestone
