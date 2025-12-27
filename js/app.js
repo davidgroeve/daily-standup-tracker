@@ -670,8 +670,8 @@ function getActiveGoals() {
     const taskEnd = parseLocal(task.end_date);
     if (!taskStart || !taskEnd) return false;
 
-    // Strict containment: Task must start on or after weekStart AND end on or before weekEnd
-    const isInRange = taskStart >= weekStart && taskEnd <= weekEnd;
+    // Overlap logic: Task starts before or during week AND ends after or during week
+    const isInRange = taskStart <= weekEnd && taskEnd >= weekStart;
 
     // Leaf task check: Must not be a parent to any other task
     const isLeaf = !state.roadmapTasks.some(t => t.parent_id === task.id);
