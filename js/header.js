@@ -269,6 +269,23 @@
                 const user = data.session.user;
 
                 document.getElementById('header-user-initial').textContent = (user.user_metadata?.full_name || user.email)[0].toUpperCase();
+
+                // Admin-only features (Activity Log)
+                const isAdmin = user.email === 'david.groeve@lovepomegranate.com';
+                const navActivity = document.getElementById('nav-activity');
+                
+                if (navActivity) {
+                    if (!isAdmin) {
+                        navActivity.parentElement.style.display = 'none';
+                    }
+                }
+
+                // If on activity.html and not admin, redirect
+                const path = window.location.pathname;
+                const page = path.split('/').pop() || 'index.html';
+                if (page === 'activity.html' && !isAdmin) {
+                    window.location.href = 'index.html';
+                }
             }
         });
     }
