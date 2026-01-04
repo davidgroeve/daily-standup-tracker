@@ -252,9 +252,123 @@
 /* --- Row 2 Styles (Stand-up Specific) --- */
 .bottom-row .header-clocks-inline {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xl);
     align-items: center;
 }
+
+/* --- Digital Clock Styles --- */
+.digital-clock-group {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.digital-clock-container {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 6px 16px;
+    border-radius: 30px;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(4px);
+    transition: all var(--transition-base);
+}
+
+.digital-clock-container:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Day Mode Styles */
+.digital-clock-container.is-day {
+    border-color: rgba(251, 191, 36, 0.3);
+    /* Amber/Gold border */
+    background: rgba(251, 191, 36, 0.05);
+}
+
+.digital-clock-container.is-day:hover {
+    border-color: rgba(251, 191, 36, 0.6);
+    background: rgba(251, 191, 36, 0.1);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+}
+
+.digital-clock-container.is-day .digital-time {
+    color: #fbbf24;
+    /* Amber-400 */
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+}
+
+/* Night Mode Styles */
+.digital-clock-container.is-night {
+    border-color: rgba(99, 102, 241, 0.3);
+    /* Indigo border */
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.digital-clock-container.is-night:hover {
+    border-color: rgba(99, 102, 241, 0.6);
+    background: rgba(99, 102, 241, 0.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.digital-clock-container.is-night .digital-time {
+    color: #818cf8;
+    /* Indigo-400 */
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+.clock-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.digital-time {
+    font-family: 'Montserrat', monospace;
+    /* Monospace for steady alignment */
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.time-unit {
+    display: inline-block;
+}
+
+.separator {
+    color: var(--accent-primary);
+    margin: 0 1px;
+    animation: pulse 1s infinite;
+    opacity: 0.8;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        text-shadow: 0 0 5px var(--accent-primary);
+    }
+
+    50% {
+        opacity: 0.4;
+        text-shadow: none;
+    }
+}
+
+/* Specific timezone highlights */
+/* .clock-sa .digital-time { } - keeping consistent for now */
 
 .bottom-row .week-info {
     display: flex;

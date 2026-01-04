@@ -169,26 +169,34 @@
     }
 
     function updateClocks() {
-        const clocks = document.querySelectorAll('.analog-clock');
+        const clocks = document.querySelectorAll('.digital-clock-container');
         clocks.forEach(clock => {
             const timezone = clock.dataset.timezone;
             if (!timezone) return;
+
             const now = new Date();
-            const options = { timeZone: timezone, hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false };
+            const options = { timeZone: timezone, hour12: false, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
             const timeString = now.toLocaleTimeString('en-US', options);
-            const [hours, minutes, seconds] = timeString.split(':').map(Number);
+            const [hours, minutes] = timeString.split(':');
 
-            const hourHand = clock.querySelector('.hour-hand');
-            const minuteHand = clock.querySelector('.minute-hand');
-            const secondHand = clock.querySelector('.second-hand');
+            // Day/Night Logic (6:00 - 18:00 is Day)
+            const hourInt = parseInt(hours, 10);
+            const isDay = hourInt >= 6 && hourInt < 18;
 
-            if (hourHand && minuteHand && secondHand) {
-                const hourDeg = (hours % 12) * 30 + minutes * 0.5;
-                const minuteDeg = minutes * 6 + seconds * 0.1;
-                const secondDeg = seconds * 6;
-                hourHand.style.transform = `rotate(${hourDeg}deg)`;
-                minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
-                secondHand.style.transform = `rotate(${secondDeg}deg)`;
+            clock.classList.remove('is-day', 'is-night');
+            clock.classList.add(isDay ? 'is-day' : 'is-night');
+
+            const timeDisplay = clock.querySelector('.digital-time');
+            if (timeDisplay) {
+                // Determine icon
+                const icon = isDay ? '☀️' : '🌙';
+
+                timeDisplay.innerHTML = `
+                    <span class="day-night-icon" style="margin-right: 6px; font-size: 0.8rem; opacity: 0.8;">${icon}</span>
+                    <span class="time-unit">${hours}</span>
+                    <span class="separator">:</span>
+                    <span class="time-unit">${minutes}</span>
+                `;
             }
         });
     }
@@ -210,10 +218,24 @@
             </div>
             <div class="header-center">
                 <div class="header-clocks-inline">
-                    <div class="clock-wrapper" title="Riyadh"><div class="analog-clock header-clock clock-sa" data-timezone="Asia/Riyadh"><div class="clock-face"><div class="clock-center"></div><div class="hand hour-hand"></div><div class="hand minute-hand"></div><div class="hand second-hand"></div></div></div></div>
-                    <div class="clock-wrapper" title="Madrid"><div class="analog-clock header-clock clock-es" data-timezone="Europe/Madrid"><div class="clock-face"><div class="clock-center"></div><div class="hand hour-hand"></div><div class="hand minute-hand"></div><div class="hand second-hand"></div></div></div></div>
-                    <div class="clock-wrapper" title="London"><div class="analog-clock header-clock clock-uk" data-timezone="Europe/London"><div class="clock-face"><div class="clock-center"></div><div class="hand hour-hand"></div><div class="hand minute-hand"></div><div class="hand second-hand"></div></div></div></div>
-                    <div class="clock-wrapper" title="Mexico"><div class="analog-clock header-clock clock-mx" data-timezone="America/Mexico_City"><div class="clock-face"><div class="clock-center"></div><div class="hand hour-hand"></div><div class="hand minute-hand"></div><div class="hand second-hand"></div></div></div></div>
+                    <div class="digital-clock-group">
+                        <div class="digital-clock-container clock-sa" data-timezone="Asia/Riyadh" title="Riyadh">
+                            <div class="clock-label">Riyadh</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-es" data-timezone="Europe/Madrid" title="Madrid">
+                            <div class="clock-label">Madrid</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-uk" data-timezone="Europe/London" title="London">
+                            <div class="clock-label">London</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-mx" data-timezone="America/Mexico_City" title="Mexico">
+                            <div class="clock-label">Mexico</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="header-right" id="header-right-col"></div>
@@ -273,7 +295,7 @@
                 // Admin-only features (Activity Log)
                 const isAdmin = user.email === 'david.groeve@lovepomegranate.com';
                 const navActivity = document.getElementById('nav-activity');
-                
+
                 if (navActivity) {
                     if (!isAdmin) {
                         navActivity.parentElement.style.display = 'none';
