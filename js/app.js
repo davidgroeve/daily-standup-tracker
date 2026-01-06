@@ -664,7 +664,7 @@ function getActiveGoals() {
   weekEnd.setDate(weekStart.getDate() + 4); // Sunday to Thursday (matching grid)
   weekEnd.setHours(23, 59, 59, 999);
 
-  // Filter roadmap tasks that are strictly within this week and are NOT parent tasks
+  // Filter roadmap tasks that are within this week
   const activeRoadmapTasks = state.roadmapTasks.filter(task => {
     const taskStart = parseLocal(task.start_date);
     const taskEnd = parseLocal(task.end_date);
@@ -672,11 +672,17 @@ function getActiveGoals() {
 
     // Overlap logic: Task starts before or during week AND ends after or during week
     const isInRange = taskStart <= weekEnd && taskEnd >= weekStart;
+    if (!isInRange) return false;
 
-    // Leaf task check: Must not be a parent to any other task
-    const isLeaf = !state.roadmapTasks.some(t => t.parent_id === task.id);
+    // Redundancy check: If this task has children that are ALSO active this week, skip the parent
+    const hasActiveChild = state.roadmapTasks.some(t => {
+      if (t.parent_id !== task.id) return false;
+      const childStart = parseLocal(t.start_date);
+      const childEnd = parseLocal(t.end_date);
+      return childStart <= weekEnd && childEnd >= weekStart;
+    });
 
-    return isInRange && isLeaf;
+    return !hasActiveChild;
   });
 
   return [
@@ -1596,8 +1602,29 @@ async function exportToCSV() {
     state.teamMembers.forEach(member => {
       const updateKey = `${member.id}_${dateStr}`;
       const update = state.updates[updateKey];
-      if (update && update.content && update.content.length > 0) {
-        const content = update.content.join('; ');
+
+      if (update && update.items && update.items.length > 0) {
+        const itemStrings = update.items.map(item => {
+          let str = `[${item.status.toUpperCase()}] ${item.title}`;
+          if (item.description) str += ` - ${item.description}`;
+          if (item.status === 'blocked' && item.block_reason) str += ` (BLOCKER: ${item.block_reason})`;
+          if (item.goal_id) {
+            const allGoals = getActiveGoals();
+            const goal = allGoals.find(g => g.id === item.goal_id);
+            if (goal) str += ` [Target: ${goal.title}]`;
+          }
+          return str;
+        });
+
+        // Add legacy content if exists
+        if (update.content && update.content.length > 0) {
+          itemStrings.push(...update.content.map(c => `[NOTE] ${c}`));
+        }
+
+        const content = itemStrings.join('\n');
+        row += `,"${content.replace(/"/g, '""')}"`;
+      } else if (update && update.content && update.content.length > 0) {
+        const content = update.content.map(c => `[NOTE] ${c}`).join('\n');
         row += `,"${content.replace(/"/g, '""')}"`;
       } else {
         row += ',';
@@ -1621,11 +1648,10 @@ async function exportToXLSX() {
   const weekStart = state.currentWeekStart;
   const weekNum = getWeekNumber(weekStart);
 
-  // Create data array
-  const data = [];
-
+  // --- Main Standup Sheet ---
+  const standupData = [];
   // Header row
-  data.push(['Day', 'Date', ...state.teamMembers.map(m => m.name)]);
+  standupData.push(['Day', 'Date', ...state.teamMembers.map(m => m.name)]);
 
   // Data rows (Sunday to Thursday)
   for (let i = 0; i < 5; i++) {
@@ -1639,28 +1665,97 @@ async function exportToXLSX() {
     state.teamMembers.forEach(member => {
       const updateKey = `${member.id}_${dateStr}`;
       const update = state.updates[updateKey];
-      if (update && update.content && update.content.length > 0) {
-        row.push(update.content.join('\n'));
+
+      if (update && update.items && update.items.length > 0) {
+        const itemStrings = update.items.map(item => {
+          let str = `[${item.status.toUpperCase()}] ${item.title}`;
+          if (item.description) str += `\n  - ${item.description}`;
+          if (item.status === 'blocked' && item.block_reason) str += `\n  - BLOCKER: ${item.block_reason}`;
+          if (item.goal_id) {
+            const allGoals = getActiveGoals();
+            const goal = allGoals.find(g => g.id === item.goal_id);
+            if (goal) str += `\n  - Target: ${goal.title}`;
+          }
+          return str;
+        });
+
+        if (update.content && update.content.length > 0) {
+          itemStrings.push(...update.content.map(c => `[NOTE] ${c}`));
+        }
+
+        row.push(itemStrings.join('\n\n'));
+      } else if (update && update.content && update.content.length > 0) {
+        row.push(update.content.map(c => `[NOTE] ${c}`).join('\n'));
       } else {
         row.push('');
       }
     });
 
-    data.push(row);
+    standupData.push(row);
   }
 
-  // Create workbook and worksheet
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(data);
+  // --- Weekly Summary Sheet ---
+  const summaryData = [];
+  summaryData.push(['WEEKLY SUMMARY - Week ' + weekNum]);
+  summaryData.push(['Range', formatDate(weekStart) + ' - ' + formatDate(addDays(weekStart, 4))]);
+  summaryData.push([]);
 
-  // Set column widths
-  ws['!cols'] = [
+  // Goals Section
+  summaryData.push(['GOALS/TARGETS']);
+  summaryData.push(['Type', 'Title', 'Owner', 'Status', 'Description', 'Block Reason']);
+  const weekGoals = state.goals || [];
+  if (weekGoals.length > 0) {
+    weekGoals.forEach(g => {
+      summaryData.push([g.type || 'Investors', g.title, g.owner, g.status, g.description, g.block_reason || '']);
+    });
+  } else {
+    summaryData.push(['No goals for this week']);
+  }
+  summaryData.push([]);
+
+  // Leaves Section
+  summaryData.push(['TEAM AVAILABILITY']);
+  summaryData.push(['Member', 'Type', 'Start Date', 'End Date', 'Description']);
+  const weekLeaves = state.leaves.filter(l => {
+    const ls = new Date(l.start_date);
+    const le = new Date(l.end_date);
+    const ws = weekStart;
+    const we = addDays(weekStart, 6);
+    return ls <= we && le >= ws;
+  });
+  if (weekLeaves.length > 0) {
+    weekLeaves.forEach(l => {
+      const member = state.teamMembers.find(m => m.id === l.member_id);
+      summaryData.push([member ? member.name : 'Unknown', l.type, l.start_date, l.end_date, l.description || '']);
+    });
+  } else {
+    summaryData.push(['Everyone available all week']);
+  }
+
+  // Create workbook and worksheets
+  const wb = XLSX.utils.book_new();
+  const wsStandup = XLSX.utils.aoa_to_sheet(standupData);
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+
+  // Set column widths for standup
+  wsStandup['!cols'] = [
     { wch: 12 },
     { wch: 12 },
-    ...state.teamMembers.map(() => ({ wch: 40 }))
+    ...state.teamMembers.map(() => ({ wch: 50 }))
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, `Week ${weekNum}`);
+  // Set column widths for summary
+  wsSummary['!cols'] = [
+    { wch: 15 },
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 50 },
+    { wch: 30 }
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsStandup, `Standup Week ${weekNum}`);
+  XLSX.utils.book_append_sheet(wb, wsSummary, `Summary Week ${weekNum}`);
   XLSX.writeFile(wb, `standup-week${weekNum}.xlsx`);
 
   closeModal('exportModal');
