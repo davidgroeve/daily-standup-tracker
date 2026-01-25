@@ -359,6 +359,11 @@ function renderWeekInfo() {
   document.getElementById('weekNumber').textContent = `WEEK ${weekNum}`;
   document.getElementById('dateRange').textContent =
     `${formatDate(state.currentWeekStart)} - ${formatDate(weekEnd)}`;
+
+  const yearBadge = document.getElementById('yearBadge');
+  if (yearBadge) {
+    yearBadge.textContent = state.currentWeekStart.getFullYear();
+  }
 }
 
 function renderTeamMembers() {
@@ -1473,6 +1478,121 @@ async function removeLeave(id) {
   }
 }
 
+// Hierarchical Date Picker Logic
+function openDatePicker() {
+  state.datePickerView = 'years';
+  renderYearPicker();
+  showModal('datePickerModal');
+}
+
+function renderYearPicker() {
+  state.datePickerView = 'years';
+  document.getElementById('datePickerTitle').textContent = 'Select Year';
+  document.getElementById('datePickerBackBtn').style.display = 'none';
+
+  const container = document.getElementById('datePickerContent');
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 1, currentYear, currentYear + 1];
+
+  container.innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+      ${years.map(year => `
+        <button class="btn btn-secondary" onclick="renderMonthPicker(${year})" style="padding: 1.5rem; font-size: 1.1rem; font-weight: 700;">
+          ${year}
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderMonthPicker(year) {
+  state.datePickerView = 'months';
+  state.selectedPickerYear = year;
+  document.getElementById('datePickerTitle').textContent = `Select Month (${year})`;
+  document.getElementById('datePickerBackBtn').style.display = 'block';
+
+  const container = document.getElementById('datePickerContent');
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  container.innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem;">
+      ${months.map((month, index) => `
+        <button class="btn btn-secondary" onclick="renderWeekPicker(${year}, ${index})" style="padding: 1rem; font-size: 0.9rem;">
+          ${month}
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderWeekPicker(year, month) {
+  state.datePickerView = 'weeks';
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  document.getElementById('datePickerTitle').textContent = `Select Week (${monthNames[month]} ${year})`;
+  document.getElementById('datePickerBackBtn').style.display = 'block';
+
+  const container = document.getElementById('datePickerContent');
+  container.innerHTML = '<div style="display: flex; flex-direction: column; gap: 0.5rem;"></div>';
+  const list = container.querySelector('div');
+
+  // Find all Sundays in that month
+  let date = new Date(year, month, 1);
+  // Go to first Sunday
+  while (date.getDay() !== 0) {
+    date.setDate(date.getDate() + 1);
+  }
+
+  // Generate weeks until we leave the month (allow one week into next month if it starts in this month)
+  while (date.getMonth() === month || (date.getMonth() === (month + 1) % 12 && date.getDate() < 7)) {
+    const weekStart = new Date(date);
+    const weekEnd = new Date(date);
+    weekEnd.setDate(date.getDate() + 4); // Thursday
+
+    const weekNum = getWeekNumber(weekStart);
+    const label = `Week ${weekNum}: ${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-secondary';
+    btn.style.textAlign = 'left';
+    btn.style.padding = '1rem';
+    btn.textContent = label;
+    btn.onclick = () => {
+      selectPickerWeek(weekStart);
+    };
+    list.appendChild(btn);
+
+    date.setDate(date.getDate() + 7);
+    if (date.getFullYear() > year && month === 11) break; // End of year guard
+    if (date.getMonth() !== month && date.getMonth() !== (month + 1) % 12) break;
+  }
+}
+
+async function selectPickerWeek(weekStart) {
+  state.currentWeekStart = weekStart;
+  localStorage.setItem('dailyStandupCurrentWeek', weekStart.toISOString());
+
+  // Reload goals for new week
+  const weekStartStr = formatDate(weekStart, 'iso');
+  state.isLoading = true;
+  renderAll(); // Render with loading state if we had one, but renderAll is fast anyway
+
+  try {
+    state.goals = await window.db.getGoals(weekStartStr);
+    renderAll();
+    closeModal('datePickerModal');
+  } catch (e) {
+    console.error(e);
+    renderAll();
+    closeModal('datePickerModal');
+  }
+}
+
 // Modal Management
 function showModal(modalId) {
   document.getElementById(modalId).classList.add('active');
@@ -1541,6 +1661,20 @@ function attachEventListeners() {
     if (state.editingLeave) {
       await removeLeave(state.editingLeave);
       closeModal('leaveModal');
+    }
+  });
+
+  // Date Picker
+  document.getElementById('weekPickerTrigger')?.addEventListener('click', () => {
+    openDatePicker();
+  });
+
+  document.getElementById('datePickerBackBtn')?.addEventListener('click', () => {
+    const view = state.datePickerView;
+    if (view === 'months') {
+      renderYearPicker();
+    } else if (view === 'weeks') {
+      renderMonthPicker(state.selectedPickerYear);
     }
   });
 

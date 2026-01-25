@@ -395,6 +395,25 @@
   </div>
 
   <!-- Holiday Calendar Modal -->
+  <!-- Hierarchical Date Picker Modal -->
+  <div class="modal" id="datePickerModal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="datePickerTitle">Select Week</h3>
+        <button class="close-modal" onclick="closeModal('datePickerModal')">×</button>
+      </div>
+      <div id="datePickerContent" class="date-picker-content" style="padding: 1rem;">
+        <!-- Years, Months, or Weeks will be rendered here -->
+      </div>
+      <div class="modal-actions"
+        style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" id="datePickerBackBtn" style="display: none;">⬅ Back</button>
+        <button class="btn btn-secondary" onclick="closeModal('datePickerModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holiday Calendar Modal -->
   <div class="modal" id="holidayCalendarModal">
     <div class="modal-content"
       style="max-width: 900px; width: 90%; max-height: 90vh; display: flex; flex-direction: column;">

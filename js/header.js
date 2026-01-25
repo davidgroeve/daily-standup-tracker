@@ -33,8 +33,12 @@
                         <div class="nav-item-container">
                             <a href="analytics.html" class="nav-item" id="nav-analytics">Analytics</a>
                         </div>
-                        <div class="nav-item-container">
+                        <div class="nav-item-container" id="nav-activity-container">
                             <a href="activity.html" class="nav-item" id="nav-activity">Activity</a>
+                            <div class="submenu" id="activity-submenu">
+                                <a href="activity.html" class="submenu-item">Activity Log</a>
+                                <a href="progress.html" class="submenu-item">Team Progress</a>
+                            </div>
                         </div>
                     </nav>
                 </div>
@@ -103,9 +107,9 @@
     } else if (page === 'analytics.html') {
         document.getElementById('nav-analytics')?.classList.add('active');
         if (pageNameEl) pageNameEl.textContent = 'Analytics';
-    } else if (page === 'activity.html') {
+    } else if (page === 'activity.html' || page === 'progress.html') {
         document.getElementById('nav-activity')?.classList.add('active');
-        if (pageNameEl) pageNameEl.textContent = 'Activity Log';
+        if (pageNameEl) pageNameEl.textContent = page === 'progress.html' ? 'Team Progress' : 'Activity Log';
     }
 
     // Theme Logic
@@ -209,9 +213,10 @@
             <div class="header-left">
                 <div class="week-info">
                     <button class="btn btn-secondary btn-icon" id="prevWeekBtn" title="Previous Week">◀</button>
-                    <div>
+                    <div class="week-display-container" id="weekPickerTrigger" style="cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-radius: var(--radius-sm); transition: background 0.2s;">
                         <span class="week-badge" id="weekNumber">WEEK --</span>
                         <span class="date-range" id="dateRange">-- --- - -- ---</span>
+                        <span class="year-badge" id="yearBadge" style="font-size: 0.7rem; font-weight: 700; color: var(--accent-primary); opacity: 0.8;">----</span>
                     </div>
                     <button class="btn btn-secondary btn-icon" id="nextWeekBtn" title="Next Week">▶</button>
                 </div>
@@ -280,7 +285,11 @@
                     <span>➕</span> Create New Milestone
                 </button>
             </div>
-            <div class="header-right"></div>
+            <div class="header-right" style="display: flex; align-items: center; padding-right: 20px;">
+                <button class="btn btn-secondary" id="roadmapExportBtn" style="gap: 6px;">
+                    <span>📤</span> Export
+                </button>
+            </div>
         `;
     }
 
@@ -292,20 +301,20 @@
 
                 document.getElementById('header-user-initial').textContent = (user.user_metadata?.full_name || user.email)[0].toUpperCase();
 
-                // Admin-only features (Activity Log)
+                // Admin-only features (Activity Log & Progress)
+                // Admin-only features (Activity Log & Progress)
                 const isAdmin = user.email === 'david.groeve@lovepomegranate.com';
-                const navActivity = document.getElementById('nav-activity');
+                const navActivityContainer = document.getElementById('nav-activity-container');
 
-                if (navActivity) {
-                    if (!isAdmin) {
-                        navActivity.parentElement.style.display = 'none';
-                    }
+                if (navActivityContainer && !isAdmin) {
+                    navActivityContainer.style.display = 'none';
                 }
 
-                // If on activity.html and not admin, redirect
+                // If on restricted page and not admin, redirect
                 const path = window.location.pathname;
                 const page = path.split('/').pop() || 'index.html';
-                if (page === 'activity.html' && !isAdmin) {
+                const restrictedPages = ['activity.html', 'progress.html'];
+                if (restrictedPages.includes(page) && !isAdmin) {
                     window.location.href = 'index.html';
                 }
             }
