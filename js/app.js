@@ -662,48 +662,7 @@ function renderGrid() {
 }
 
 function getActiveGoals() {
-  // Calculate current week range
-  const weekStart = new Date(state.currentWeekStart);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 4); // Sunday to Thursday (matching grid)
-  weekEnd.setHours(23, 59, 59, 999);
-
-  // Filter roadmap tasks that are within this week
-  const activeRoadmapTasks = state.roadmapTasks.filter(task => {
-    const taskStart = parseLocal(task.start_date);
-    const taskEnd = parseLocal(task.end_date);
-    if (!taskStart || !taskEnd) return false;
-
-    // Overlap logic: Task starts before or during week AND ends after or during week
-    const isInRange = taskStart <= weekEnd && taskEnd >= weekStart;
-    if (!isInRange) return false;
-
-    // Redundancy check: If this task has children that are ALSO active this week, skip the parent
-    const hasActiveChild = state.roadmapTasks.some(t => {
-      if (t.parent_id !== task.id) return false;
-      const childStart = parseLocal(t.start_date);
-      const childEnd = parseLocal(t.end_date);
-      return childStart <= weekEnd && childEnd >= weekStart;
-    });
-
-    return !hasActiveChild;
-  });
-
-  return [
-    ...activeRoadmapTasks.map(task => ({
-      id: `task_${task.id}`,
-      title: task.title,
-      description: task.description || '',
-      owner: task.assigned_to || '',
-      status: task.progress === 100 ? 'completed' : (task.progress > 0 ? 'in-progress' : 'not-started'),
-      type: 'Roadmap',
-      progress: task.progress,
-      isRoadmap: true,
-      originalTask: task
-    })),
-    ...state.goals.map(g => ({ ...g, isRoadmap: false }))
-  ];
+  return state.goals.map(g => ({ ...g, isRoadmap: false }));
 }
 
 function renderGoals() {
@@ -760,27 +719,23 @@ function renderGoals() {
     const status = goal.status || 'not-started';
     const type = goal.type || 'General';
     const blockReason = goal.block_reason || '';
-    const isRoadmap = goal.isRoadmap;
-    const progress = isRoadmap ? getTaskProgress(goal.originalTask) : 0;
-    const mappedStatus = isRoadmap ? (progress === 100 ? 'completed' : (progress > 0 ? 'in-progress' : 'not-started')) : status;
 
     return `
-    <div class="goal-card ${isRoadmap ? 'roadmap-goal' : ''}" ${isRoadmap ? `onclick="window.location.href='roadmap.html'"` : `onclick="editGoal('${goal.id}')"`}>
-      ${!isRoadmap ? `
+    <div class="goal-card" onclick="editGoal('${goal.id}')">
       <div class="goal-actions">
         <button class="btn btn-secondary btn-small btn-icon" onclick="event.stopPropagation(); removeGoal('${goal.id}')" title="Remove">×</button>
-      </div>` : ''}
+      </div>
       <div class="goal-header-badges" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
         <span class="goal-type-badge" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
-          ${isRoadmap ? '🗺️ Roadmap' : type}
+          ${type}
         </span>
         <div style="display: flex; gap: 6px;">
-          <div class="goal-status-badge" style="background: ${statusColors[mappedStatus]};">
-              ${isRoadmap ? `${progress}%` : statusLabels[status]}
+          <div class="goal-status-badge" style="background: ${statusColors[status]};">
+              ${statusLabels[status]}
           </div>
         </div>
       </div>
-      <h4 class="goal-title" style="${isRoadmap ? 'color: var(--accent-primary);' : ''}">${title}</h4>
+      <h4 class="goal-title">${title}</h4>
       ${description ? `<p class="goal-description">${description}</p>` : ''}
       ${status === 'blocked' && blockReason ?
         `<div class="goal-block-reason" style="background: rgba(245, 101, 101, 0.1); border-left: 2px solid #f56565; padding: 8px; margin: 8px 0; font-size: 0.85rem; color: #f56565;">
@@ -789,11 +744,6 @@ function renderGoals() {
       <div style="margin-top: auto; padding-top: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           ${owner ? `<p class="goal-owner" style="margin:0; font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">👤 ${owner}</p>` : '<span></span>'}
-          ${isRoadmap ? `
-            <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-              <div style="width: ${progress}%; height: 100%; background: var(--accent-primary); border-radius: 3px;"></div>
-            </div>
-          ` : ''}
         </div>
         
         ${goalStats[goal.id] ? `

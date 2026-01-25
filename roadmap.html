@@ -645,6 +645,40 @@
             </div>
         </div>
 
+        <!-- Export Roadmap Modal -->
+        <div class="modal" id="exportRoadmapModal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3>Export Roadmap Data</h3>
+                    <button class="close-modal" onclick="closeExportModal()">×</button>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="exportFromDate">From Date</label>
+                    <input type="date" id="exportFromDate">
+                </div>
+                <div class="form-group">
+                    <label for="exportToDate">To Date</label>
+                    <input type="date" id="exportToDate">
+                </div>
+                <div class="export-options"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="exportRoadmap('csv')"
+                        style="flex-direction: column; height: auto; padding: 15px; gap: 8px;">
+                        <span style="font-size: 1.5rem;">📊</span>
+                        <span>Export CSV</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportRoadmap('xlsx')"
+                        style="flex-direction: column; height: auto; padding: 15px; gap: 8px;">
+                        <span style="font-size: 1.5rem;">📗</span>
+                        <span>Export XLSX</span>
+                    </button>
+                </div>
+                <div class="modal-actions" style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeExportModal()" style="width: 100%;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
         <script src="js/supabase.js"></script>
         <script src="js/auth.js"></script>

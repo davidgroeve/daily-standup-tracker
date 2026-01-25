@@ -710,6 +710,12 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Export Button
+    const exportBtn = document.getElementById('roadmapExportBtn');
+    if (exportBtn) {
+        exportBtn.onclick = openExportModal;
+    }
 }
 
 // ---------------------------
@@ -821,6 +827,132 @@ function toggleTaskVisibility(id) {
     list.scrollTop = scroll;
 
     renderRoadmap();
+}
+
+
+// ---------------------------
+// EXPORT LOGIC
+// ---------------------------
+function openExportModal() {
+    const modal = document.getElementById('exportRoadmapModal');
+    if (!modal) return;
+
+    // Default dates: current month range
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    document.getElementById('exportFromDate').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('exportToDate').value = lastDay.toISOString().split('T')[0];
+
+    modal.classList.add('active');
+}
+
+function closeExportModal() {
+    document.getElementById('exportRoadmapModal')?.classList.remove('active');
+}
+
+async function exportRoadmap(format) {
+    const fromDateStr = document.getElementById('exportFromDate').value;
+    const toDateStr = document.getElementById('exportToDate').value;
+
+    if (!fromDateStr || !toDateStr) {
+        alert('Please select both From and To dates');
+        return;
+    }
+
+    const fromDate = new Date(fromDateStr);
+    const toDate = new Date(toDateStr);
+    toDate.setHours(23, 59, 59, 999);
+
+    // Filter tasks that overlap with the selected range
+    const exportTasks = roadmapTasks.filter(task => {
+        const start = new Date(task.start_date);
+        const end = new Date(task.end_date);
+        return (start <= toDate && end >= fromDate);
+    });
+
+    if (exportTasks.length === 0) {
+        alert('No tasks found in the selected date range');
+        return;
+    }
+
+    // Sort by start date (and sort order)
+    exportTasks.sort((a, b) => new Date(a.start_date) - new Date(b.start_date) || (a.sort_order || 0) - (b.sort_order || 0));
+
+    try {
+        if (format === 'xlsx') {
+            exportToXLSX(exportTasks, fromDateStr, toDateStr);
+        } else {
+            exportToCSV(exportTasks, fromDateStr, toDateStr);
+        }
+
+        const userEmail = (await window.supabaseClient.auth.getSession()).data.session?.user.email;
+        await window.db.logChange(userEmail, 'export', 'roadmap', format, `Exported roadmap data from ${fromDateStr} to ${toDateStr}`);
+
+        closeExportModal();
+    } catch (err) {
+        console.error('Export failed:', err);
+        alert('Export failed. Check console for details.');
+    }
+}
+
+function exportToCSV(tasks, fromDate, toDate) {
+    const headers = ['Title', 'Start Date', 'End Date', 'Assigned To', 'Progress (%)', 'Days'];
+    const rows = tasks.map(t => [
+        t.title,
+        t.start_date,
+        t.end_date,
+        t.assigned_to || '',
+        getTaskProgress(t),
+        t.duration_days || ''
+    ]);
+
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `roadmap-export-${fromDate}-to-${toDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function exportToXLSX(tasks, fromDate, toDate) {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel library (xlsx) not loaded. Please refresh the page.');
+        return;
+    }
+
+    const data = tasks.map(t => ({
+        'Title': t.title,
+        'Start Date': t.start_date,
+        'End Date': t.end_date,
+        'Assigned To': t.assigned_to || '',
+        'Progress (%)': getTaskProgress(t),
+        'Days': t.duration_days || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Roadmap");
+
+    // Set column widths
+    ws['!cols'] = [
+        { wch: 40 }, // Title
+        { wch: 12 }, // Start
+        { wch: 12 }, // End
+        { wch: 20 }, // Assigned To
+        { wch: 15 }, // Progress
+        { wch: 10 }  // Days
+    ];
+
+    XLSX.writeFile(wb, `roadmap-export-${fromDate}-to-${toDate}.xlsx`);
 }
 
 function initTableResizers() {

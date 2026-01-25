@@ -160,7 +160,7 @@
             const { data, error } = await window.supabaseClient
                 .from('goals')
                 .select('*')
-                .eq('week_start', weekStart)
+                .or(`status.neq.completed,week_start.eq.${weekStart}`)
                 .order('created_at', { ascending: true });
 
             if (error) {
