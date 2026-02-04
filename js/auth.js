@@ -14,12 +14,17 @@ const auth = {
 
     // Sign Out
     async signOut() {
-        const { error } = await window.supabaseClient.auth.signOut();
-        if (!error) {
+        try {
             const user = await this.getUser();
             if (user) {
-                await window.db.logChange(user.email, 'auth', user.id, 'logout', 'User logged out');
+                await window.db.logChange(user.email, 'auth', user.id, 'logout', 'User logged out manually');
             }
+        } catch (e) {
+            console.error('Logging logout failed', e);
+        }
+
+        const { error } = await window.supabaseClient.auth.signOut();
+        if (!error) {
             window.location.href = 'login.html';
         }
         return { error };
@@ -39,9 +44,15 @@ const auth = {
 
     // Initialize Auth Listener
     initAuthListener() {
-        window.supabaseClient.auth.onAuthStateChange((event, session) => {
+        window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth event:', event);
             if (event === 'SIGNED_OUT') {
+                // If we are signed out but it wasn't a manual logout (impossible to know for sure without state, but we can assume timeout if no window trigger)
+                // Actually, let's just log every signed out event if we can still identify the user or if it's broad
                 window.location.href = 'login.html';
+            } else if (event === 'USER_UPDATED') {
+                const user = session?.user;
+                if (user) await window.db.logChange(user.email, 'auth', user.id, 'update', 'User profile updated');
             }
         });
     },

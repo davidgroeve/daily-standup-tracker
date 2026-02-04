@@ -512,6 +512,12 @@ function renderGantt(expandedVisibleIds) {
 
         ganttGrid.appendChild(bar);
     });
+
+    // Set Gantt grid height to match rows
+    const rowHeight = 60;
+    const headerHeight = 90;
+    const totalHeight = (visibleTasksList.length * rowHeight) + headerHeight;
+    ganttGrid.style.height = `${totalHeight}px`;
 }
 
 function openModal(task = null) {
@@ -715,6 +721,30 @@ function setupEventListeners() {
     const exportBtn = document.getElementById('roadmapExportBtn');
     if (exportBtn) {
         exportBtn.onclick = openExportModal;
+    }
+
+    // Bidirectional Scroll Sync
+    const milestonesPanel = document.querySelector('.milestones-panel');
+    const ganttPanel = document.querySelector('.gantt-panel');
+
+    if (milestonesPanel && ganttPanel) {
+        let isSyncing = false;
+
+        milestonesPanel.onscroll = () => {
+            if (!isSyncing) {
+                isSyncing = true;
+                ganttPanel.scrollTop = milestonesPanel.scrollTop;
+                isSyncing = false;
+            }
+        };
+
+        ganttPanel.onscroll = () => {
+            if (!isSyncing) {
+                isSyncing = true;
+                milestonesPanel.scrollTop = ganttPanel.scrollTop;
+                isSyncing = false;
+            }
+        };
     }
 }
 

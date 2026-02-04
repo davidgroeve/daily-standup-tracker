@@ -375,3 +375,82 @@
     align-items: center;
     gap: var(--spacing-sm);
 }
+
+/* --- Mobile Specific Optimization --- */
+@media (max-width: 768px) {
+    .page-title {
+        display: none !important;
+        /* Remove redundant Stand-up label */
+    }
+
+    .header-center {
+        display: none;
+        /* Hide main nav menu on mobile, or move to hamburger if needed. User only asked for standup removal. */
+    }
+
+    .digital-clock-group {
+        display: none !important;
+        /* Hide inline clocks */
+    }
+
+    .mobile-clock-btn {
+        display: flex !important;
+        /* Show single clock icon */
+    }
+
+    .header-row.top-row {
+        padding: 0 var(--spacing-md);
+    }
+
+    .header-row.bottom-row {
+        height: auto;
+        padding: 8px var(--spacing-md);
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    #weekNumber,
+    #dateRange,
+    #yearBadge {
+        display: none !important;
+    }
+
+    #mobileWeekLabel {
+        display: inline-block !important;
+    }
+}
+
+/* Mobile Clock Button */
+.mobile-clock-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mobile-clock-btn:hover {
+    border-color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Clocks Modal Styles */
+.clocks-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.clocks-modal-list .digital-clock-container {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+}

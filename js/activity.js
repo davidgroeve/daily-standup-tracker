@@ -77,7 +77,7 @@ function renderLogs() {
                 <div class="activity-group-header collapsed" onclick="toggleActivityGroup('${groupId}', this)">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         ${getGroupLabel(key)}
-                        <span class="count-badge" style="font-size: 0.7rem; opacity: 0.6;">${groups[key].length}</span>
+                        <span class="count-badge" style="font-size: 0.7rem; opacity: 0.8; background: var(--glass-border); color: var(--text-primary); border: 1px solid var(--accent-primary);">${groups[key].length} events</span>
                     </div>
                     <span class="toggle-icon">▼</span>
                 </div>
@@ -99,8 +99,11 @@ function toggleActivityGroup(groupId, header) {
 }
 
 function getActionGroup(action) {
-    if (['login', 'logout'].includes(action)) return 'auth';
+    if (['login', 'logout', 'timeout'].includes(action)) return 'auth';
     if (['csv', 'xlsx', 'pdf', 'image'].includes(action)) return 'export';
+    if (['add_item', 'edit_item', 'delete_item'].includes(action)) return 'items';
+    if (['cut', 'copy', 'paste'].includes(action)) return 'clipboard';
+    if (action === 'migration') return 'migration';
     return action; // create, update, delete
 }
 
@@ -138,12 +141,36 @@ function renderLogItem(log) {
     } else if (log.action === 'delete') {
         actionClass = 'action-delete';
         actionIcon = '🗑️';
-    } else if (log.action === 'login' || log.action === 'logout') {
+    } else if (log.action === 'login' || log.action === 'logout' || log.action === 'timeout') {
         actionClass = 'action-auth';
-        actionIcon = '👤';
+        actionIcon = log.action === 'timeout' ? '⏰' : '👤';
     } else if (log.action === 'csv' || log.action === 'xlsx' || log.action === 'pdf' || log.action === 'image') {
         actionClass = 'action-export';
         actionIcon = '📤';
+    } else if (log.action === 'cut') {
+        actionClass = 'action-clipboard';
+        actionIcon = '✂️';
+    } else if (log.action === 'copy') {
+        actionClass = 'action-clipboard';
+        actionIcon = '📋';
+    } else if (log.action === 'paste') {
+        actionClass = 'action-clipboard';
+        actionIcon = '📥';
+    } else if (log.action === 'migration') {
+        actionClass = 'action-migration';
+        actionIcon = '📜';
+    } else if (log.action === 'add_item') {
+        actionClass = 'action-create';
+        actionIcon = '➕';
+    } else if (log.action === 'edit_item') {
+        actionClass = 'action-update';
+        actionIcon = '✏️';
+    } else if (log.action === 'delete_item') {
+        actionClass = 'action-delete';
+        actionIcon = '🗑️';
+    } else if (log.action === 'clear_cell') {
+        actionClass = 'action-delete';
+        actionIcon = '🧹';
     }
 
     return `

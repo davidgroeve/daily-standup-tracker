@@ -90,73 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       openLeavesDetailModal();
     }
   });
-
-
-  // Change Password Logic
-  const changePwdBtn = document.getElementById('changePasswordBtn');
-  const changePwdModal = document.getElementById('changePasswordModal');
-  const cancelChangePwdBtn = document.getElementById('cancelChangePasswordBtn');
-  const cancelChangePwdBtnXs = document.getElementById('cancelChangePasswordBtnXs');
-  const saveChangePwdBtn = document.getElementById('saveChangePasswordBtn');
-
-  if (changePwdBtn) {
-    changePwdBtn.addEventListener('click', () => {
-      changePwdModal.style.display = 'flex';
-      document.getElementById('changeOldPassword').value = '';
-      document.getElementById('changeNewPassword').value = '';
-      document.getElementById('changeConfirmPassword').value = '';
-    });
-  }
-
-  const closeChangePwdModal = () => {
-    if (changePwdModal) changePwdModal.style.display = 'none';
-  };
-
-  if (cancelChangePwdBtn) cancelChangePwdBtn.addEventListener('click', closeChangePwdModal);
-  if (cancelChangePwdBtnXs) cancelChangePwdBtnXs.addEventListener('click', closeChangePwdModal);
-
-  if (saveChangePwdBtn) {
-    saveChangePwdBtn.addEventListener('click', async () => {
-      const oldPwd = document.getElementById('changeOldPassword').value;
-      const newPwd = document.getElementById('changeNewPassword').value;
-      const confirmPwd = document.getElementById('changeConfirmPassword').value;
-
-      if (!oldPwd || !newPwd || !confirmPwd) {
-        alert('Please fill in all fields');
-        return;
-      }
-
-      if (newPwd !== confirmPwd) {
-        alert('New passwords do not match');
-        return;
-      }
-
-      const originalText = saveChangePwdBtn.textContent;
-      saveChangePwdBtn.textContent = 'Verifying...';
-      saveChangePwdBtn.disabled = true;
-
-      try {
-        // 1. Verify Old Password by Signing In
-        const { error: signInError } = await window.auth.signIn(state.currentUserEmail, oldPwd);
-        if (signInError) {
-          throw new Error('Incorrect current password');
-        }
-
-        // 2. Update to New Password
-        saveChangePwdBtn.textContent = 'Updating...';
-        const { error: updateError } = await window.auth.updatePassword(newPwd);
-        if (updateError) throw updateError;
-
-        alert('Password updated successfully!');
-        closeChangePwdModal();
-      } catch (e) {
-        alert(e.message);
-      } finally {
-        saveChangePwdBtn.textContent = originalText;
-        saveChangePwdBtn.disabled = false;
-      }
-    });
-  }
 });
 
 
@@ -276,6 +209,24 @@ function loadFromLocalStorage() {
   }
 }
 
+function ensureUniqueTitle(title, existingItems, currentIndex = null) {
+  let newTitle = title;
+  let count = 0;
+
+  const checkDuplicate = (t) => {
+    return existingItems.some((item, idx) => {
+      if (currentIndex !== null && idx === currentIndex) return false;
+      return item.title === t;
+    });
+  };
+
+  while (checkDuplicate(newTitle)) {
+    newTitle = `${title} (Copy${count > 0 ? ' ' + count : ''})`;
+    count++;
+  }
+  return newTitle;
+}
+
 // Navigation
 async function navigateWeek(direction) {
   state.currentWeekStart = addDays(state.currentWeekStart, direction * 7);
@@ -355,6 +306,8 @@ async function loadAndRenderChangeLogs() {
 function renderWeekInfo() {
   const weekNum = getWeekNumber(state.currentWeekStart);
   const weekEnd = addDays(state.currentWeekStart, 4); // Thursday
+  const year = state.currentWeekStart.getFullYear();
+  const month = state.currentWeekStart.toLocaleString('en-US', { month: 'short' });
 
   document.getElementById('weekNumber').textContent = `WEEK ${weekNum}`;
   document.getElementById('dateRange').textContent =
@@ -362,7 +315,12 @@ function renderWeekInfo() {
 
   const yearBadge = document.getElementById('yearBadge');
   if (yearBadge) {
-    yearBadge.textContent = state.currentWeekStart.getFullYear();
+    yearBadge.textContent = year;
+  }
+
+  const mobileLabel = document.getElementById('mobileWeekLabel');
+  if (mobileLabel) {
+    mobileLabel.textContent = `W${weekNum} ${month} ${year}`;
   }
 }
 
@@ -624,7 +582,7 @@ function renderGrid() {
                         ${groups[type].map(item => `
                             <div class="mini-item">
                                 <span class="mini-status ${item.status}"></span>
-                                <span class="mini-title">${item.title}</span>
+                                <span class="mini-title">${item.title} ${item.history && item.history.length > 0 ? '📜' : ''}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -659,6 +617,109 @@ function renderGrid() {
 
     tbody.appendChild(row);
   }
+
+  // Also render mobile view
+  renderMobileGrid();
+}
+
+function renderMobileGrid() {
+  const container = document.getElementById('mobileTeamList');
+  if (!container) return;
+
+  const weekDays = [];
+  for (let i = 0; i < 5; i++) {
+    weekDays.push(formatDate(addDays(state.currentWeekStart, i), 'iso'));
+  }
+
+  container.innerHTML = state.teamMembers.map(member => {
+    // Calculate total updates for this member for the current week
+    let updateCount = 0;
+    weekDays.forEach(dateStr => {
+      const updateKey = `${member.id}_${dateStr}`;
+      const update = state.updates[updateKey];
+      if (update) {
+        if (update.items && update.items.length > 0) {
+          updateCount += update.items.length;
+        } else if (update.content && update.content.length > 0) {
+          updateCount += update.content.length;
+        }
+      }
+    });
+
+    return `
+      <button class="mobile-team-member-btn" 
+              style="border-left-color: ${member.color};"
+              onclick="openMemberWeekModal('${member.id}')">
+        <span style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: block; width: 12px; height: 12px; background: ${member.color}; border-radius: 50%;"></span>
+          ${member.name}
+          ${updateCount > 0 ? `<span class="count-badge" style="margin-left: 5px;">${updateCount}</span>` : ''}
+        </span>
+        <span>➔</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function openMemberWeekModal(memberId) {
+  const member = state.teamMembers.find(m => m.id === memberId);
+  if (!member) return;
+
+  document.getElementById('memberWeekModalTitle').innerHTML = `<span style="color: ${member.color}">●</span> ${member.name}'s Week`;
+
+  const container = document.getElementById('memberWeekContent');
+  container.innerHTML = '';
+
+  for (let i = 0; i < 5; i++) {
+    const date = addDays(state.currentWeekStart, i);
+    const dateStr = formatDate(date, 'iso');
+    const updateKey = `${member.id}_${dateStr}`;
+    const update = state.updates[updateKey];
+
+    const hasItems = update && update.items && update.items.length > 0;
+    const hasContent = update && update.content && update.content.length > 0;
+
+    let contentHtml = '<p style="color: var(--text-muted); font-style: italic;">No updates</p>';
+
+    if (hasItems || hasContent) {
+      if (hasItems) {
+        // Reuse logic? Or simplify for mobile list
+        contentHtml = '<div style="display: flex; flex-direction: column; gap: 4px;">' +
+          update.items.map(item => `
+                <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border-left: 3px solid ${getStatusColor(item.status)};">
+                    <div style="font-weight: 600; font-size: 0.9rem;">${item.title}</div>
+                    ${item.description ? `<div style="font-size: 0.8rem; opacity: 0.8; margin-top: 2px;">${item.description}</div>` : ''}
+                </div>
+            `).join('') + '</div>';
+      } else {
+        contentHtml = `<ul style="padding-left: 20px;">${update.content.map(item => `<li>${item}</li>`).join('')}</ul>`;
+      }
+    }
+
+    const dayHtml = `
+      <div class="member-week-day" onclick="openDailyView('${member.id}', '${dateStr}')">
+        <div class="member-week-date">
+             <span>${formatDate(date, 'day').toUpperCase()}, ${formatDate(date).split(' ')[0]} ${date.getDate()}</span>
+             ${(hasItems || hasContent) ? '<span>✏️</span>' : '<span>➕</span>'}
+        </div>
+        <div>
+           ${contentHtml}
+        </div>
+      </div>
+    `;
+    container.innerHTML += dayHtml;
+  }
+
+  showModal('memberWeekModal');
+}
+
+function getStatusColor(status) {
+  switch (status) {
+    case 'completed': return '#48bb78';
+    case 'in-progress': return '#667eea';
+    case 'blocked': return '#f56565';
+    default: return '#7878a0';
+  }
 }
 
 function getActiveGoals() {
@@ -668,6 +729,8 @@ function getActiveGoals() {
 function renderGoals() {
   const container = document.getElementById('goalsList');
   const countBadge = document.getElementById('goalsCount');
+
+  if (!container) return; // Exit if goals section is removed
 
   const allGoals = getActiveGoals();
 
@@ -899,6 +962,7 @@ function openDailyView(memberId, date) {
 
         const el = document.createElement('div');
         el.className = 'daily-item-card';
+        el.dataset.index = index;
         el.innerHTML = `
              <div class="item-header">
                 <span class="item-type badge">${item.type || 'General'}</span>
@@ -908,7 +972,16 @@ function openDailyView(memberId, date) {
              ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
              ${goalInfo}
              ${item.status === 'blocked' && item.block_reason ? `<div class="item-block">🛑 ${item.block_reason}</div>` : ''}
+             ${item.history && item.history.length > 0 ? `
+               <div class="item-history" style="font-size: 0.75rem; opacity: 0.7; margin-top: 8px; font-style: italic;">
+                 ${item.history.map(h => `📜 ${h.from} ➔ ${h.to}`).join('<br>')}
+               </div>` : ''}
            `;
+
+        // Duplicate check for highlighting
+        const isDuplicate = items.some((it, i) => i !== index && it.title === item.title);
+        if (isDuplicate) el.classList.add('duplicate-item');
+
         el.onclick = () => openUpdateItemModal(index);
         container.appendChild(el);
       });
@@ -944,6 +1017,8 @@ function openUpdateItemModal(index = null) {
   const goalInput = document.getElementById('updateItemGoal');
   const blockInput = document.getElementById('updateItemBlockReason');
   const blockGroup = document.getElementById('updateItemBlockReasonGroup');
+  const historyGroup = document.getElementById('updateItemHistoryGroup');
+  const historyList = document.getElementById('updateItemHistoryList');
   const deleteBtn = document.getElementById('deleteUpdateItemBtn');
 
   // Populate Goal Selector
@@ -961,6 +1036,14 @@ function openUpdateItemModal(index = null) {
     blockInput.value = item.block_reason || '';
     blockGroup.style.display = item.status === 'blocked' ? 'block' : 'none';
     deleteBtn.style.display = 'block';
+
+    // Show History
+    if (item.history && item.history.length > 0) {
+      historyGroup.style.display = 'block';
+      historyList.innerHTML = item.history.map(h => `📜 ${h.from} ➔ ${h.to}`).join('<br>');
+    } else {
+      historyGroup.style.display = 'none';
+    }
   } else {
     typeInput.value = 'General';
     titleInput.value = '';
@@ -969,6 +1052,7 @@ function openUpdateItemModal(index = null) {
     goalInput.value = '';
     blockInput.value = '';
     blockGroup.style.display = 'none';
+    historyGroup.style.display = 'none';
     deleteBtn.style.display = 'none';
   }
 
@@ -997,8 +1081,10 @@ async function saveUpdateItem() {
   };
 
   if (state.editingUpdateItemIndex !== null) {
+    newItem.title = ensureUniqueTitle(newItem.title, update.items, state.editingUpdateItemIndex);
     update.items[state.editingUpdateItemIndex] = newItem;
   } else {
+    newItem.title = ensureUniqueTitle(newItem.title, update.items);
     update.items.push(newItem);
   }
 
@@ -1007,6 +1093,12 @@ async function saveUpdateItem() {
   try {
     await window.db.saveUpdate(memberId, date, update.content, update.items, timestamp, state.currentUserEmail);
     state.updates[updateKey] = { ...update, timestamp };
+
+    // Specific logging
+    const action = state.editingUpdateItemIndex !== null ? 'edit_item' : 'add_item';
+    const desc = state.editingUpdateItemIndex !== null ? `Edited item: ${newItem.title}` : `Added item: ${newItem.title}`;
+    await window.db.logChange(state.currentUserEmail, 'update', updateKey, action, desc);
+
     renderAll();
     openDailyView(memberId, date);
     closeModal('updateItemModal');
@@ -1024,12 +1116,15 @@ async function deleteUpdateItem() {
   const updateKey = `${memberId}_${date}`;
   let update = state.updates[updateKey];
 
-  update.items.splice(state.editingUpdateItemIndex, 1);
-  const timestamp = new Date().toISOString();
-
   try {
+    const itemToDelete = update.items[state.editingUpdateItemIndex];
+    update.items.splice(state.editingUpdateItemIndex, 1);
+    const timestamp = new Date().toISOString();
     await window.db.saveUpdate(memberId, date, update.content, update.items, timestamp, state.currentUserEmail);
     state.updates[updateKey] = update;
+
+    await window.db.logChange(state.currentUserEmail, 'update', updateKey, 'delete_item', `Deleted item from modal: ${itemToDelete?.title || 'Unknown'}`);
+
     renderAll();
     openDailyView(memberId, date);
     closeModal('updateItemModal');
@@ -1048,6 +1143,7 @@ async function deleteDailyUpdate() {
   try {
     await window.db.deleteUpdate(memberId, date, state.currentUserEmail);
     delete state.updates[updateKey];
+    await window.db.logChange(state.currentUserEmail, 'update', updateKey, 'delete', `Deleted ALL updates for ${date}`);
     renderAll();
     closeModal('dailyViewModal');
   } catch (e) {
@@ -1577,27 +1673,38 @@ function attachEventListeners() {
     }
   });
 
-  // Goal
-  document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
-  document.getElementById('saveGoalBtn').addEventListener('click', saveGoal);
-  document.getElementById('deleteGoalBtn').addEventListener('click', async () => {
-    if (state.editingGoal !== null) {
-      await removeGoal(state.editingGoal);
-      closeModal('goalModal');
-    }
-  });
+
+  // Goal (Safeguarded)
+  const addGoalBtn = document.getElementById('addGoalBtn');
+  if (addGoalBtn) addGoalBtn.addEventListener('click', openGoalModal);
+
+  const saveGoalBtn = document.getElementById('saveGoalBtn');
+  if (saveGoalBtn) saveGoalBtn.addEventListener('click', saveGoal);
+
+  const deleteGoalBtn = document.getElementById('deleteGoalBtn');
+  if (deleteGoalBtn) {
+    deleteGoalBtn.addEventListener('click', async () => {
+      if (state.editingGoal !== null) {
+        await removeGoal(state.editingGoal);
+        closeModal('goalModal');
+      }
+    });
+  }
 
   // Goal Status Change Listener
-  document.getElementById('goalStatus').addEventListener('change', (e) => {
-    const blockGroup = document.getElementById('blockReasonGroup');
-    if (e.target.value === 'blocked') {
-      blockGroup.style.display = 'block';
-      // Focus on reason
-      setTimeout(() => document.getElementById('goalBlockReason').focus(), 100);
-    } else {
-      blockGroup.style.display = 'none';
-    }
-  });
+  // Goal Status Change Listener (Safeguarded)
+  const goalStatusEl = document.getElementById('goalStatus');
+  if (goalStatusEl) {
+    goalStatusEl.addEventListener('change', (e) => {
+      const blockGroup = document.getElementById('blockReasonGroup');
+      if (e.target.value === 'blocked') {
+        blockGroup.style.display = 'block';
+        setTimeout(() => document.getElementById('goalBlockReason').focus(), 100);
+      } else {
+        blockGroup.style.display = 'none';
+      }
+    });
+  }
 
   // Leave
   const addLeaveBtn = document.getElementById('addLeaveBtn');
@@ -1651,7 +1758,73 @@ function attachEventListeners() {
         closeModal(modal.id);
       });
     }
+
+    // Keyboard Shortcuts (Ctrl+C, Ctrl+V, Ctrl+X)
+    const isControl = e.ctrlKey || e.metaKey;
+    if (isControl) {
+      if (e.key === 'c' || e.key === 'C') {
+        const hovered = state.lastHoveredElement;
+        if (hovered) {
+          prepareClipboardFromElement(hovered, 'copy');
+          handleClipboardAction('copy');
+        }
+      } else if (e.key === 'v' || e.key === 'V') {
+        const hovered = state.lastHoveredElement;
+        if (hovered) {
+          prepareClipboardFromElement(hovered, 'paste');
+          handleClipboardAction('paste');
+        }
+      } else if (e.key === 'x' || e.key === 'X') {
+        const hovered = state.lastHoveredElement;
+        if (hovered) {
+          prepareClipboardFromElement(hovered, 'cut');
+          handleClipboardAction('cut');
+        }
+      }
+    }
   });
+
+  // Track hovered cards for keyboard shortcuts
+  document.body.addEventListener('mouseover', (e) => {
+    const card = e.target.closest('.update-card, .goal-card');
+    if (card) {
+      state.lastHoveredElement = card;
+    }
+  });
+}
+
+function prepareClipboardFromElement(el, action) {
+  const menu = document.getElementById('customContextMenu');
+  const isUpdate = el.classList.contains('update-card');
+  const isGoal = el.classList.contains('goal-card');
+
+  menu.dataset.targetType = isUpdate ? 'update' : (isGoal ? 'goal' : '');
+
+  if (isUpdate) {
+    const onclick = el.getAttribute('onclick');
+    const matches = onclick.match(/'([^']+)',\s*'([^']+)'/);
+    if (matches) {
+      menu.dataset.memberId = matches[1];
+      menu.dataset.date = matches[2];
+    }
+  } else if (isGoal) {
+    const onclick = el.getAttribute('onclick');
+    const matches = onclick.match(/'([^']+)'/);
+    if (matches) {
+      menu.dataset.goalId = matches[1];
+    }
+  }
+}
+
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span>${type === 'success' ? '✅' : 'ℹ️'}</span> ${message}`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 500);
+  }, 3000);
 }
 
 // Export Functions
@@ -1938,15 +2111,12 @@ function initContextMenu() {
 
   // Global Context Menu Handler
   document.body.addEventListener('contextmenu', (e) => {
-    // Check if right-clicking on an update card or a goal card
-    const updateCard = e.target.closest('.update-card');
+    // Check targets
+    const updateCard = e.target.closest('.update-card'); // Grid Cell
+    const dailyItemCard = e.target.closest('.daily-item-card'); // Modal Item
     const goalCard = e.target.closest('.goal-card');
-    const updateSection = e.target.closest('.update-items-grouped') || e.target.closest('.update-content');
 
-    // We also want to support pasting into empty slots
-    const isEmptySlot = e.target.classList.contains('update-card') && e.target.classList.contains('empty');
-
-    if (updateCard || goalCard || isEmptySlot) {
+    if (updateCard || dailyItemCard || goalCard) {
       e.preventDefault();
 
       const { clientX: x, clientY: y } = e;
@@ -1954,21 +2124,53 @@ function initContextMenu() {
       menu.style.top = y + 'px';
       menu.style.display = 'block';
 
-      // Store temporary metadata on the menu
-      menu.dataset.targetType = updateCard || isEmptySlot ? 'update' : 'goal';
-      menu.dataset.memberId = updateCard?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] ||
-        isEmptySlot?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-      menu.dataset.date = updateCard?.getAttribute('onclick')?.match(/'[^']+',\s*'([^']+)'/)?.[1] ||
-        isEmptySlot?.getAttribute('onclick')?.match(/'[^']+',\s*'([^']+)'/)?.[1];
-      menu.dataset.goalId = goalCard?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+      // Reset menu state
+      menu.dataset.targetType = '';
+      menu.dataset.memberId = '';
+      menu.dataset.date = '';
+      menu.dataset.goalId = '';
+      menu.dataset.itemIndex = '';
 
-      // Enable/Disable buttons
-      const canPaste = (state.clipboard.type === 'update' && (updateCard || isEmptySlot)) ||
-        (state.clipboard.type === 'goal' && goalCard);
+      const isEmptySlot = updateCard?.classList.contains('empty');
 
-      document.getElementById('ctxPaste').classList.toggle('disabled', !canPaste);
-      document.getElementById('ctxCopy').classList.toggle('disabled', isEmptySlot);
-      document.getElementById('ctxCut').classList.toggle('disabled', isEmptySlot || (goalCard && goalCard.classList.contains('roadmap-goal')));
+      if (dailyItemCard) {
+        menu.dataset.targetType = 'item';
+        menu.dataset.memberId = state.currentDailyView.memberId;
+        menu.dataset.date = state.currentDailyView.date;
+        menu.dataset.itemIndex = dailyItemCard.dataset.index;
+      } else if (updateCard) {
+        menu.dataset.targetType = 'cell';
+        const onclick = updateCard.getAttribute('onclick');
+        const matches = onclick?.match(/'([^']+)',\s*'([^']+)'/);
+        if (matches) {
+          menu.dataset.memberId = matches[1];
+          menu.dataset.date = matches[2];
+        }
+      } else if (goalCard) {
+        menu.dataset.targetType = 'goal';
+        menu.dataset.goalId = goalCard.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+      }
+
+      // Visibility & Disabled state
+      const targetType = menu.dataset.targetType;
+      const hasClipboard = !!state.clipboard.data;
+      const isRoadmapGoal = goalCard?.classList.contains('roadmap-goal');
+
+      // Cell actions: Paste, Edit, Clear
+      document.getElementById('ctxPaste').style.display = targetType === 'cell' ? 'flex' : 'none';
+      document.getElementById('ctxClear').style.display = targetType === 'cell' ? 'flex' : 'none';
+      document.getElementById('ctxPaste').classList.toggle('disabled', !hasClipboard || state.clipboard.type !== 'update');
+      document.getElementById('ctxClear').classList.toggle('disabled', isEmptySlot);
+
+      // Item/Goal actions: Cut, Copy, Delete
+      document.getElementById('ctxCopy').style.display = (targetType === 'item' || targetType === 'goal') ? 'flex' : 'none';
+      document.getElementById('ctxCut').style.display = (targetType === 'item' || targetType === 'goal') ? 'flex' : 'none';
+      document.getElementById('ctxDelete').style.display = (targetType === 'item' || targetType === 'goal') ? 'flex' : 'none';
+      document.getElementById('ctxCut').classList.toggle('disabled', isRoadmapGoal);
+      document.getElementById('ctxDelete').classList.toggle('disabled', isRoadmapGoal);
+
+      // Edit is common but handles differently
+      document.getElementById('ctxEdit').style.display = 'flex';
     } else {
       menu.style.display = 'none';
     }
@@ -1987,18 +2189,85 @@ function initContextMenu() {
     e.stopPropagation();
     handleClipboardAction('paste');
   };
+  document.getElementById('ctxEdit').onclick = (e) => {
+    e.stopPropagation();
+    handleContextMenuAction('edit');
+  };
+  document.getElementById('ctxDelete').onclick = (e) => {
+    e.stopPropagation();
+    handleContextMenuAction('delete');
+  };
+  document.getElementById('ctxClear').onclick = (e) => {
+    e.stopPropagation();
+    handleContextMenuAction('clear');
+  };
+}
+
+async function handleContextMenuAction(action) {
+  const menu = document.getElementById('customContextMenu');
+  const { targetType, memberId, date, goalId, itemIndex } = menu.dataset;
+  menu.style.display = 'none';
+
+  if (action === 'edit') {
+    if (targetType === 'cell') {
+      openDailyView(memberId, date);
+    } else if (targetType === 'item') {
+      openUpdateItemModal(parseInt(itemIndex));
+    } else if (targetType === 'goal') {
+      openGoalModal(goalId);
+    }
+  } else if (action === 'delete') {
+    if (targetType === 'item') {
+      if (confirm('Delete this item?')) {
+        const updateKey = `${memberId}_${date}`;
+        const update = state.updates[updateKey];
+        update.items.splice(parseInt(itemIndex), 1);
+        const timestamp = new Date().toISOString();
+        await window.db.saveUpdate(memberId, date, update.content, update.items, timestamp, state.currentUserEmail);
+        state.updates[updateKey] = { ...update, timestamp };
+        await window.db.logChange(state.currentUserEmail, 'update', updateKey, 'delete_item', `Deleted item: ${update.items[parseInt(itemIndex)]?.title || 'Unknown'}`);
+        openDailyView(memberId, date); // Refresh modal
+        renderAll();
+        showToast('Item deleted', 'info');
+      }
+    } else if (targetType === 'goal') {
+      deleteGoal(goalId);
+    }
+  } else if (action === 'clear') {
+    if (targetType === 'cell') {
+      if (confirm(`Clear all items for ${date}?`)) {
+        const updateKey = `${memberId}_${date}`;
+        const update = state.updates[updateKey] || { content: [], items: [] };
+        const timestamp = new Date().toISOString();
+        await window.db.saveUpdate(memberId, date, update.content, [], timestamp, state.currentUserEmail);
+        state.updates[updateKey] = { ...update, items: [], timestamp };
+        await window.db.logChange(state.currentUserEmail, 'update', updateKey, 'clear_cell', `Cleared all items for ${date}`);
+        renderAll();
+        showToast('Cell cleared', 'info');
+      }
+    }
+  }
 }
 
 async function handleClipboardAction(action) {
   const menu = document.getElementById('customContextMenu');
-  const type = menu.dataset.targetType;
-  const memberId = menu.dataset.memberId;
-  const date = menu.dataset.date;
-  const goalId = menu.dataset.goalId;
+  const { targetType, memberId, date, goalId, itemIndex } = menu.dataset;
 
   if (action === 'copy' || action === 'cut') {
-    if (type === 'update') {
-      // Find the update items
+    if (targetType === 'item') {
+      const updateKey = `${memberId}_${date}`;
+      const update = state.updates[updateKey];
+      const item = update.items[parseInt(itemIndex)];
+
+      state.clipboard = {
+        type: 'update',
+        action: action,
+        data: [JSON.parse(JSON.stringify(item))], // Wrap in array for compatibility
+        sourceKey: `${updateKey}_${itemIndex}`
+      };
+      await window.db.logChange(state.currentUserEmail, 'update', updateKey, action, `${action === 'cut' ? 'Cut' : 'Copied'} item: ${item.title}`);
+    } else if (targetType === 'cell') {
+      // Logic for copying whole cell (from previous implementation)
       const updateKey = `${memberId}_${date}`;
       const update = state.updates[updateKey];
       if (!update || !update.items || update.items.length === 0) return;
@@ -2006,10 +2275,11 @@ async function handleClipboardAction(action) {
       state.clipboard = {
         type: 'update',
         action: action,
-        data: JSON.parse(JSON.stringify(update.items)), // Clone
+        data: JSON.parse(JSON.stringify(update.items)),
         sourceKey: updateKey
       };
-    } else if (type === 'goal') {
+      await window.db.logChange(state.currentUserEmail, 'update', updateKey, action, `${action === 'cut' ? 'Cut' : 'Copied'} cell items for ${date}`);
+    } else if (targetType === 'goal') {
       const goal = state.goals.find(g => g.id === goalId);
       if (!goal) return;
 
@@ -2019,13 +2289,19 @@ async function handleClipboardAction(action) {
         data: JSON.parse(JSON.stringify(goal)),
         sourceKey: goalId
       };
+      await window.db.logChange(state.currentUserEmail, 'goal', goalId, action, `${action === 'cut' ? 'Cut' : 'Copied'} target: ${goal.title}`);
     }
 
     // Visual feedback for cut
     document.querySelectorAll('.cut-source').forEach(el => el.classList.remove('cut-source'));
     if (action === 'cut') {
-      const sourceSelector = type === 'update' ? `[onclick*="'${memberId}', '${date}'"]` : `[onclick*="'${goalId}'"]`;
-      document.querySelectorAll(sourceSelector).forEach(el => el.classList.add('cut-source'));
+      if (targetType === 'item') {
+        const el = document.querySelector(`.daily-item-card[data-index="${itemIndex}"]`);
+        el?.classList.add('cut-source');
+      } else {
+        const sourceSelector = targetType === 'cell' ? `[onclick*="'${memberId}', '${date}'"]` : `[onclick*="'${goalId}'"]`;
+        document.querySelectorAll(sourceSelector).forEach(el => el.classList.add('cut-source'));
+      }
     }
   } else if (action === 'paste') {
     if (!state.clipboard.data) return;
@@ -2036,20 +2312,58 @@ async function handleClipboardAction(action) {
 
       // Merge items
       const newItems = JSON.parse(JSON.stringify(state.clipboard.data));
-      targetUpdate.items = [...(targetUpdate.items || []), ...newItems];
+
+      const sourceKeyParts = state.clipboard.sourceKey ? state.clipboard.sourceKey.split('_') : [];
+      const srcMemberId = sourceKeyParts[0];
+
+      newItems.forEach(item => {
+        // Track migration history if moving between different members
+        if (srcMemberId && srcMemberId !== memberId) {
+          if (!item.history) item.history = [];
+          const srcMember = state.teamMembers.find(m => m.id === srcMemberId);
+          const tgtMember = state.teamMembers.find(m => m.id === memberId);
+          item.history.push({
+            from: srcMember ? srcMember.name : srcMemberId,
+            to: tgtMember ? tgtMember.name : memberId,
+            date: new Date().toISOString()
+          });
+          window.db.logChange(state.currentUserEmail, 'update', targetKey, 'migration', `Migrated item "${item.title}" from ${srcMember ? srcMember.name : srcMemberId} to ${tgtMember ? tgtMember.name : memberId}`);
+        }
+
+        item.title = ensureUniqueTitle(item.title, targetUpdate.items);
+        targetUpdate.items.push(item);
+      });
 
       // Save
       const timestamp = new Date().toISOString();
       await window.db.saveUpdate(memberId, date, targetUpdate.content, targetUpdate.items, timestamp, state.currentUserEmail);
       state.updates[targetKey] = { ...targetUpdate, timestamp };
 
+      // Log the paste
+      const desc = newItems.length > 1 ? `Pasted ${newItems.length} items to ${date}` : `Pasted item: ${newItems[0].title} to ${date}`;
+      await window.db.logChange(state.currentUserEmail, 'update', targetKey, 'paste', desc);
+
       if (state.clipboard.action === 'cut') {
-        const [srcMemberId, srcDate] = state.clipboard.sourceKey.split('_');
-        const srcUpdate = state.updates[state.clipboard.sourceKey];
-        await window.db.saveUpdate(srcMemberId, srcDate, srcUpdate.content, [], timestamp, state.currentUserEmail);
-        state.updates[state.clipboard.sourceKey] = { ...srcUpdate, items: [], timestamp };
+        if (state.clipboard.sourceKey.includes('_')) {
+          const parts = state.clipboard.sourceKey.split('_');
+          if (parts.length === 3) { // Item cut
+            const [srcMemberId, srcDate, idx] = parts;
+            const srcKey = `${srcMemberId}_${srcDate}`;
+            const srcUpdate = state.updates[srcKey];
+            srcUpdate.items.splice(parseInt(idx), 1);
+            await window.db.saveUpdate(srcMemberId, srcDate, srcUpdate.content, srcUpdate.items, timestamp, state.currentUserEmail);
+            state.updates[srcKey] = { ...srcUpdate, timestamp };
+          } else { // Full cell cut
+            const [srcMemberId, srcDate] = parts;
+            const srcKey = state.clipboard.sourceKey;
+            const srcUpdate = state.updates[srcKey];
+            await window.db.saveUpdate(srcMemberId, srcDate, srcUpdate.content, [], timestamp, state.currentUserEmail);
+            state.updates[srcKey] = { ...srcUpdate, items: [], timestamp };
+          }
+        }
         state.clipboard = { type: null, action: null, data: null, sourceKey: null };
       }
+      showToast('Pasted successfully', 'success');
     } else if (state.clipboard.type === 'goal') {
       // Create new goal based on clipboard data
       const goalData = state.clipboard.data;
@@ -2068,10 +2382,14 @@ async function handleClipboardAction(action) {
         state.goals = state.goals.filter(g => g.id !== state.clipboard.sourceKey);
         state.clipboard = { type: null, action: null, data: null, sourceKey: null };
       }
+      showToast('Goal pasted', 'success');
     }
 
     renderAll();
   }
+
+  if (action === 'copy') showToast('Copied to clipboard', 'info');
+  if (action === 'cut') showToast('Ready to move', 'info');
 
   document.getElementById('customContextMenu').style.display = 'none';
 }

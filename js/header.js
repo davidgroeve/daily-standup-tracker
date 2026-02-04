@@ -44,9 +44,7 @@
                 </div>
 
                 <div class="header-right">
-                    <button class="ai-btn" id="header-ai-btn">
-                        <span>✨</span> AI Assistant
-                    </button>
+
                     
                     <button class="btn btn-secondary btn-icon" id="header-theme-toggle" title="Toggle Theme">
                         🌙
@@ -72,12 +70,42 @@
                 </div>
             </div>
 
-            <!-- Row 2: Page-specific Controls (Optional) -->
+            <!-- Page Title Subtitle (Hidden on mobile) -->
             <div class="header-row bottom-row" id="header-bottom-row">
                 <!-- Content injected by JS based on page -->
             </div>
         </div>
     </header>
+
+    <!-- Global Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="close-modal" id="cancelChangePasswordBtnXs">×</button>
+            </div>
+            <form id="changePasswordForm">
+                <!-- Accessibility: Duplicate hidden username field -->
+                <input type="text" name="username" autocomplete="username" style="display:none;">
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="changeOldPassword">Current Password</label>
+                    <input type="password" id="changeOldPassword" name="oldPassword" placeholder="Enter current password" required autocomplete="current-password" style="width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--glass-border);">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="changeNewPassword">New Password</label>
+                    <input type="password" id="changeNewPassword" name="newPassword" placeholder="Enter new password" required autocomplete="new-password" style="width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--glass-border);">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="changeConfirmPassword">Confirm Password</label>
+                    <input type="password" id="changeConfirmPassword" name="confirmPassword" placeholder="Confirm new password" required autocomplete="new-password" style="width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--glass-border);">
+                </div>
+                <div class="modal-actions" style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" id="cancelChangePasswordBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveChangePasswordBtn">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
     `;
 
     // Inject Header
@@ -134,15 +162,81 @@
         };
     }
 
-    // User Dropdown
+    // --- User Dropdown & Password Modal ---
     const userTrigger = document.querySelector('.user-icon-trigger');
     const userMenu = document.getElementById('header-user-menu');
+    const changePwdBtn = document.getElementById('header-change-password');
+    const changePwdModal = document.getElementById('changePasswordModal');
+    const changePwdForm = document.getElementById('changePasswordForm');
+    const cancelChangePwdBtn = document.getElementById('cancelChangePasswordBtn');
+    const cancelChangePwdBtnXs = document.getElementById('cancelChangePasswordBtnXs');
+    const saveChangePwdBtn = document.getElementById('saveChangePasswordBtn');
+
+    const closeChangePwdModal = () => {
+        changePwdModal?.classList.remove('active');
+    };
+
     if (userTrigger && userMenu) {
         userTrigger.onclick = (e) => {
             e.stopPropagation();
             userMenu.classList.toggle('active');
         };
         document.addEventListener('click', () => userMenu.classList.remove('active'));
+    }
+
+    if (changePwdBtn && changePwdModal) {
+        changePwdBtn.onclick = (e) => {
+            e.preventDefault();
+            changePwdModal.classList.add('active');
+            userMenu?.classList.remove('active');
+            changePwdForm?.reset();
+        };
+    }
+
+    if (cancelChangePwdBtn) cancelChangePwdBtn.onclick = closeChangePwdModal;
+    if (cancelChangePwdBtnXs) cancelChangePwdBtnXs.onclick = closeChangePwdModal;
+
+    if (changePwdForm) {
+        changePwdForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const oldPwd = document.getElementById('changeOldPassword').value;
+            const newPwd = document.getElementById('changeNewPassword').value;
+            const confirmPwd = document.getElementById('changeConfirmPassword').value;
+
+            if (newPwd !== confirmPwd) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            const originalText = saveChangePwdBtn.textContent;
+            saveChangePwdBtn.textContent = 'Verifying...';
+            saveChangePwdBtn.disabled = true;
+
+            try {
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session) throw new Error('No active session found');
+                const userEmail = session.user.email;
+
+                const { error: signInError } = await window.supabaseClient.auth.signInWithPassword({
+                    email: userEmail,
+                    password: oldPwd
+                });
+                if (signInError) throw new Error('Incorrect current password');
+
+                const { error: updateError } = await window.supabaseClient.auth.updateUser({
+                    password: newPwd
+                });
+                if (updateError) throw updateError;
+
+                alert('Password updated successfully!');
+                closeChangePwdModal();
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                saveChangePwdBtn.textContent = originalText;
+                saveChangePwdBtn.disabled = false;
+            }
+        };
     }
 
     // Wiki Context Link
@@ -213,10 +307,11 @@
             <div class="header-left">
                 <div class="week-info">
                     <button class="btn btn-secondary btn-icon" id="prevWeekBtn" title="Previous Week">◀</button>
-                    <div class="week-display-container" id="weekPickerTrigger" style="cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-radius: var(--radius-sm); transition: background 0.2s;">
+                    <div class="week-display-container" id="weekPickerTrigger" style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 4px 12px; border-radius: var(--radius-sm); transition: background 0.2s;">
                         <span class="week-badge" id="weekNumber">WEEK --</span>
-                        <span class="date-range" id="dateRange">-- --- - -- ---</span>
-                        <span class="year-badge" id="yearBadge" style="font-size: 0.7rem; font-weight: 700; color: var(--accent-primary); opacity: 0.8;">----</span>
+                        <span class="date-range" id="dateRange" style="font-weight: 500;">-- --- - -- ---</span>
+                        <span class="year-badge" id="yearBadge" style="font-size: 0.85rem; font-weight: 700; color: #991b1b; opacity: 0.9;">----</span>
+                        <span class="mobile-week-label" id="mobileWeekLabel" style="display: none; font-weight: 600; font-size: 0.9rem;">W-- --- ----</span>
                     </div>
                     <button class="btn btn-secondary btn-icon" id="nextWeekBtn" title="Next Week">▶</button>
                 </div>
@@ -243,8 +338,51 @@
                     </div>
                 </div>
             </div>
-            <div class="header-right" id="header-right-col"></div>
+            <div class="header-right" id="header-right-col">
+                <button class="mobile-clock-btn" id="mobileClockBtn" title="World Clocks">🕒</button>
+            </div>
+
+            <!-- Clocks Modal (Mobile) -->
+            <div class="modal" id="clocksModal">
+                <div class="modal-content" style="max-width: 350px;">
+                    <div class="modal-header">
+                        <h3>World Clocks</h3>
+                        <button class="close-modal" id="closeClocksModal">×</button>
+                    </div>
+                    <div class="clocks-modal-list">
+                        <div class="digital-clock-container clock-sa" data-timezone="Asia/Riyadh" title="Riyadh">
+                            <div class="clock-label">Riyadh</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-es" data-timezone="Europe/Madrid" title="Madrid">
+                            <div class="clock-label">Madrid</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-uk" data-timezone="Europe/London" title="London">
+                            <div class="clock-label">London</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                        <div class="digital-clock-container clock-mx" data-timezone="America/Mexico_City" title="Mexico">
+                            <div class="clock-label">Mexico</div>
+                            <div class="digital-time">--:--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
+
+        // Mobile Clock Toggle
+        const mobileClockBtn = document.getElementById('mobileClockBtn');
+        const clocksModal = document.getElementById('clocksModal');
+        const closeClocksModal = document.getElementById('closeClocksModal');
+
+        if (mobileClockBtn && clocksModal) {
+            mobileClockBtn.onclick = () => clocksModal.classList.add('active');
+        }
+        if (closeClocksModal && clocksModal) {
+            closeClocksModal.onclick = () => clocksModal.classList.remove('active');
+        }
+
         initClocks();
     }
 

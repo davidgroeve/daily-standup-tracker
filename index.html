@@ -24,23 +24,18 @@
   <div class="container">
     <!-- Top Row: Goals + Leaves Sidebar -->
     <div class="dashboard-top-row">
-      <!-- Goals Section -->
-      <section class="goals-section collapsible-section" id="goalsSection">
-        <div class="goals-header">
-          <div class="header-left" onclick="toggleSection('goals')">
-            <span class="collapse-icon" id="goalsCollapseIcon">▼</span>
-            <h2>🎯 Goals - Targets <span class="count-badge" id="goalsCount">0</span></h2>
+      <!-- Leaves Section -->
+      <section class="leaves-section collapsible-section" id="leavesSection">
+        <div class="leaves-header">
+          <div class="header-left" onclick="toggleSection('leaves')">
+            <span class="collapse-icon" id="leavesCollapseIcon">▼</span>
+            <h2>🏖️ Leaves - Team Availability <span class="count-badge" id="leavesCount">0</span></h2>
           </div>
-          <button class="btn btn-primary btn-small" id="addGoalBtn">➕ Add Goal</button>
+          <button class="btn btn-primary btn-small" id="addLeaveBtn" onclick="openLeaveModal()">➕ Add Leave</button>
         </div>
-        <div class="goals-list collapsible-content" id="goalsList">
-          <!-- Goals will be dynamically added here -->
+        <div class="leaves-list collapsible-content" id="leavesList">
+          <!-- Leaves will be dynamically added here -->
         </div>
-      </section>
-
-      <!-- Leaves Section (DEPRECATED - moved to header) -->
-      <section class="leaves-section collapsible-section" id="leavesSection" style="display: none;">
-        <div class="leaves-list" id="leavesList"></div>
       </section>
     </div>
 
@@ -68,7 +63,29 @@
           <!-- Grid rows will be dynamically added here -->
         </tbody>
       </table>
+
+      <!-- Mobile View: Team List -->
+      <div class="mobile-team-list" id="mobileTeamList">
+        <!-- Team member buttons will be dynamically added here -->
+      </div>
     </section>
+  </div>
+
+  <!-- Member Week View Modal (Mobile) -->
+  <div class="modal" id="memberWeekModal">
+    <div class="modal-content" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 id="memberWeekModalTitle">Weekly Updates</h3>
+        <button class="close-modal" onclick="closeModal('memberWeekModal')">×</button>
+      </div>
+      <div id="memberWeekContent" class="member-week-content"
+        style="flex: 1; overflow-y: auto; padding: var(--spacing-sm);">
+        <!-- Weekly updates for member will be rendered here -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('memberWeekModal')">Close</button>
+      </div>
+    </div>
   </div>
 
   <!-- Manage Team Modal -->
@@ -190,6 +207,11 @@
         <label for="updateItemBlockReason" style="color: #ef4444;">Block Reason</label>
         <textarea id="updateItemBlockReason" placeholder="What is blocking this?"
           style="border-color: #ef4444; min-height: 60px;"></textarea>
+      </div>
+      <div class="form-group" id="updateItemHistoryGroup"
+        style="display: none; border-top: 1px dashed var(--border-color); padding-top: var(--spacing-sm); margin-top: var(--spacing-sm);">
+        <label style="opacity: 0.6; font-size: 0.8rem; font-style: italic;">Migration History</label>
+        <div id="updateItemHistoryList" style="font-size: 0.75rem; opacity: 0.8; margin-top: 4px;"></div>
       </div>
       <div class="modal-actions">
         <button class="btn-delete-anim" id="deleteUpdateItemBtn" style="display: none;">
@@ -356,22 +378,29 @@
         <h3>Change Password</h3>
         <button class="close-modal" id="cancelChangePasswordBtnXs">×</button>
       </div>
-      <div class="form-group" style="margin-top: 1rem;">
-        <label>Current Password</label>
-        <input type="password" id="changeOldPassword" placeholder="Enter current password">
-      </div>
-      <div class="form-group">
-        <label>New Password</label>
-        <input type="password" id="changeNewPassword" placeholder="Enter new password">
-      </div>
-      <div class="form-group">
-        <label>Confirm Password</label>
-        <input type="password" id="changeConfirmPassword" placeholder="Confirm new password">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="cancelChangePasswordBtn">Cancel</button>
-        <button class="btn btn-primary" id="saveChangePasswordBtn">Update</button>
-      </div>
+      <form id="changePasswordForm">
+        <!-- Accessibility: Duplicate hidden username field -->
+        <input type="text" name="username" autocomplete="username" style="display:none;">
+        <div class="form-group" style="margin-top: 1rem;">
+          <label for="changeOldPassword">Current Password</label>
+          <input type="password" id="changeOldPassword" name="oldPassword" placeholder="Enter current password" required
+            autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label for="changeNewPassword">New Password</label>
+          <input type="password" id="changeNewPassword" name="newPassword" placeholder="Enter new password" required
+            autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label for="changeConfirmPassword">Confirm Password</label>
+          <input type="password" id="changeConfirmPassword" name="confirmPassword" placeholder="Confirm new password"
+            required autocomplete="new-password">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelChangePasswordBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveChangePasswordBtn">Update</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -498,8 +527,11 @@
   <div id="customContextMenu" class="context-menu" style="display: none;">
     <div class="context-menu-item" id="ctxCopy"><span>📋</span> Copy</div>
     <div class="context-menu-item" id="ctxCut"><span>✂️</span> Cut</div>
-    <div class="context-menu-divider"></div>
     <div class="context-menu-item" id="ctxPaste"><span>📥</span> Paste</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="ctxEdit"><span>✏️</span> Edit</div>
+    <div class="context-menu-item" id="ctxDelete"><span>🗑️</span> Delete</div>
+    <div class="context-menu-item" id="ctxClear"><span>🧹</span> Clear All</div>
   </div>
 
   <script src="js/header.js"></script>
