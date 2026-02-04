@@ -24,6 +24,17 @@
   <div class="container">
     <!-- Top Row: Goals + Leaves Sidebar -->
     <div class="dashboard-top-row">
+      <!-- Goals Section (Desktop Only) -->
+      <section class="goals-section desktop-only" id="goalsSection">
+        <div class="goals-header">
+          <h2>🎯 Goals - Targets <span class="count-badge" id="goalsCount">0</span></h2>
+          <button class="btn btn-primary btn-small" id="addGoalBtn">➕ Add Goal</button>
+        </div>
+        <div class="goals-list" id="goalsList">
+          <!-- Goals will be dynamically added here -->
+        </div>
+      </section>
+
       <!-- Leaves Section -->
       <section class="leaves-section collapsible-section" id="leavesSection">
         <div class="leaves-header">
@@ -64,6 +75,14 @@
         </tbody>
       </table>
 
+      <!-- Mobile View: Quick Actions -->
+      <div class="mobile-only" style="margin-bottom: var(--spacing-md);">
+        <button class="btn btn-primary" style="width: 100%; padding: var(--spacing-md); font-weight: 700;"
+          id="mobileGoalsBtn">
+          🎯 Goals / Targets <span id="mobileGoalsCount" class="count-badge">0</span>
+        </button>
+      </div>
+
       <!-- Mobile View: Team List -->
       <div class="mobile-team-list" id="mobileTeamList">
         <!-- Team member buttons will be dynamically added here -->
@@ -84,6 +103,24 @@
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('memberWeekModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Goals Modal -->
+  <div class="modal" id="mobileGoalsModal">
+    <div class="modal-content" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3>🎯 Weekly Goals & Targets</h3>
+        <button class="close-modal" onclick="closeModal('mobileGoalsModal')">×</button>
+      </div>
+      <div id="mobileGoalsList" class="goals-list"
+        style="flex: 1; overflow-y: auto; padding: var(--spacing-sm); display: flex; flex-direction: column; gap: var(--spacing-md);">
+        <!-- Goals for mobile will be rendered here -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('mobileGoalsModal')">Close</button>
+        <button class="btn btn-primary" id="mobileAddGoalBtn">➕ Add Goal</button>
       </div>
     </div>
   </div>

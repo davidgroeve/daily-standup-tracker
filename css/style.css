@@ -1121,8 +1121,30 @@ body {
   margin-bottom: var(--spacing-lg);
 }
 
+.leaves-section {
+  display: flex !important;
+}
+
 .hidden {
   display: none !important;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block !important;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
 }
 
 /* Loading State */
@@ -1839,15 +1861,9 @@ body {
   transition: width 0.5s ease;
 }
 
-/* Leaves Section - Sidebar Style */
-.leaves-section {
-  display: none !important;
-}
-
 .goals-section {
   flex-grow: 1;
   margin-bottom: 0;
-  /* Remove bottom margin as wrapper handles it */
 }
 
 /* Fix goals list to not overflow container */

@@ -244,7 +244,15 @@ function renderAll() {
   renderWeekInfo();
   renderTeamMembers();
   renderGrid();
+  renderMobileGrid();
   renderGoals();
+
+  // If mobile goals modal is active, refresh it
+  const mobileGoalsModal = document.getElementById('mobileGoalsModal');
+  if (mobileGoalsModal && mobileGoalsModal.classList.contains('active')) {
+    renderGoals('mobileGoalsList');
+  }
+
   renderLeaves();
   loadAndRenderChangeLogs();
 }
@@ -726,13 +734,17 @@ function getActiveGoals() {
   return state.goals.map(g => ({ ...g, isRoadmap: false }));
 }
 
-function renderGoals() {
-  const container = document.getElementById('goalsList');
+function renderGoals(targetContainerId = 'goalsList') {
+  const container = document.getElementById(targetContainerId);
   const countBadge = document.getElementById('goalsCount');
+  const mobileCountBadge = document.getElementById('mobileGoalsCount');
 
-  if (!container) return; // Exit if goals section is removed
-
+  // Always update both badges if they exist
   const allGoals = getActiveGoals();
+  if (countBadge) countBadge.textContent = allGoals.length;
+  if (mobileCountBadge) mobileCountBadge.textContent = allGoals.length;
+
+  if (!container) return; // Exit if the specific container is not found
 
   // Aggregate stats from updates: { goal_id: { member_name: count } }
   const goalStats = {};
@@ -753,8 +765,6 @@ function renderGoals() {
       });
     }
   });
-
-  if (countBadge) countBadge.textContent = allGoals.length;
 
   if (allGoals.length === 0) {
     container.innerHTML = '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1;">No goals or roadmap tasks for this week.</p>';
@@ -1677,6 +1687,17 @@ function attachEventListeners() {
   // Goal (Safeguarded)
   const addGoalBtn = document.getElementById('addGoalBtn');
   if (addGoalBtn) addGoalBtn.addEventListener('click', openGoalModal);
+
+  const mobileGoalsBtn = document.getElementById('mobileGoalsBtn');
+  if (mobileGoalsBtn) mobileGoalsBtn.addEventListener('click', () => {
+    renderGoals('mobileGoalsList');
+    showModal('mobileGoalsModal');
+  });
+
+  const mobileAddGoalBtn = document.getElementById('mobileAddGoalBtn');
+  if (mobileAddGoalBtn) mobileAddGoalBtn.addEventListener('click', () => {
+    openGoalModal();
+  });
 
   const saveGoalBtn = document.getElementById('saveGoalBtn');
   if (saveGoalBtn) saveGoalBtn.addEventListener('click', saveGoal);
