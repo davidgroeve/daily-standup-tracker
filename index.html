@@ -22,7 +22,6 @@
 
   <!-- Main Container -->
   <div class="container">
-    <!-- Top Row: Goals + Leaves Sidebar -->
     <div class="dashboard-top-row">
       <!-- Goals Section (Desktop Only) -->
       <section class="goals-section desktop-only" id="goalsSection">
@@ -32,20 +31,6 @@
         </div>
         <div class="goals-list" id="goalsList">
           <!-- Goals will be dynamically added here -->
-        </div>
-      </section>
-
-      <!-- Leaves Section (Desktop Only) -->
-      <section class="leaves-section collapsible-section desktop-only" id="leavesSection">
-        <div class="leaves-header">
-          <div class="header-left" onclick="toggleSection('leaves')">
-            <span class="collapse-icon" id="leavesCollapseIcon">▼</span>
-            <h2>🏖️ Leaves - Team Availability <span class="count-badge" id="leavesCount">0</span></h2>
-          </div>
-          <button class="btn btn-primary btn-small" id="addLeaveBtn" onclick="openLeaveModal()">➕ Add Leave</button>
-        </div>
-        <div class="leaves-list collapsible-content" id="leavesList">
-          <!-- Leaves will be dynamically added here -->
         </div>
       </section>
     </div>

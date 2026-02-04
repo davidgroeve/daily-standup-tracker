@@ -253,7 +253,6 @@ function renderAll() {
     renderGoals('mobileGoalsList');
   }
 
-  renderLeaves();
   loadAndRenderChangeLogs();
 }
 
